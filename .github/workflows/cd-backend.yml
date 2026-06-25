@@ -1,9 +1,11 @@
-name: Backend CD
+name: Deploy AWS Backend
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
+    paths:
+      - 'infrastructure/**'
+      - 'services/**'
 
 permissions:
   id-token: write
