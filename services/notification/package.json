@@ -1,0 +1,10 @@
+{
+  "name": "@music-store/notification",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "build": "echo \"notification has no build step yet\"",
+    "test": "echo \"No tests configured for notification\""
+  }
+}

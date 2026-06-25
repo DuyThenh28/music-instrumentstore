@@ -35,13 +35,13 @@ Repository cũng có các thư mục ban đầu cho backend và infrastructure m
 ## Hiện Trạng Triển Khai
 
 - Frontend: Next.js App Router, React, TypeScript, Tailwind CSS.
-- Danh mục sản phẩm: dữ liệu tĩnh và ảnh sản phẩm lưu trong local assets.
+- Danh mục sản phẩm: dữ liệu tĩnh và sản phẩm lưu trong local assets.
 - Giỏ hàng: quản lý bằng client-side cart context.
 - API chatbot: Next.js route handler dùng OpenAI API.
 - Infrastructure: bộ khung AWS CDK một phần trong `infrastructure`.
 - Backend services: các thư mục placeholder trong `services`.
 - Vị trí ứng dụng: `apps/web`.
-
+ảnh 
 ## Cấu Trúc Repository
 
 ```text
@@ -49,7 +49,7 @@ music-instrument-store/
 |-- apps/
 |   `-- web/                         # Next.js web app
 |       |-- app/                     # App Router pages, API routes, components, context
-|       |-- public/                  # Product images and static assets
+|       |-- public/                  # Static assets
 |       |-- package.json
 |       `-- README.md
 |-- infrastructure/

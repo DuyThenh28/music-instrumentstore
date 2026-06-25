@@ -805,7 +805,7 @@ export default function ProductDetail() {
     addToCart({
       id: product.id,
       name: product.name,
-      price: product.price,
+      price: String(product.price),
       image: product.image,
       quantity: 1,
     });
@@ -830,7 +830,7 @@ export default function ProductDetail() {
             </div>
 
             <div className="yamaha-gallery">
-              {product.gallery.map((img, index) => (
+              {(product.gallery ?? []).map((img, index) => (
                 <button
                   key={index}
                   className={
@@ -879,7 +879,7 @@ export default function ProductDetail() {
 
                 <h3>Đặc điểm nổi bật</h3>
                 <ul>
-                  {product.features.map((item, index) => (
+                  {(product.features ?? []).map((item, index) => (
                     <li key={index}>{item}</li>
                   ))}
                 </ul>
@@ -957,7 +957,7 @@ export default function ProductDetail() {
 </div>
 
                 <div className="yamaha-spec-table">
-                  {Object.entries(product.specs).map(([key, value]) => (
+                  {Object.entries(product.specs ?? {}).map(([key, value]) => (
                     <div className="yamaha-spec-row" key={key}>
                       <span>{key}</span>
                       <strong>{value}</strong>

@@ -16,9 +16,11 @@ The project is designed for a 5-person team:
 
 Music Instrument Store is an e-commerce project for selling saxophones and accessories. The working application is a Next.js web app in `apps/web` with product browsing, search and filtering, product details, cart flow, order pages, admin page, login and register pages, and an AI chat endpoint.
 
-The repository also includes early folders for the target backend and infrastructure:
+The repository also includes backend and infrastructure folders for the target serverless architecture:
 
-- `services/` contains placeholder service folders for product, checkout, chatbot, and notification services.
+- `services/product-api` implements API Gateway Lambda handlers for product reads from DynamoDB.
+- `services/order-processing` implements an SQS Lambda handler for persisting pending orders in DynamoDB.
+- `services/payment-webhook` implements a Stripe webhook Lambda handler that publishes payment events to EventBridge.
 - `infrastructure/` contains an AWS CDK skeleton, including a SecurityStack for storing Stripe credentials in AWS Secrets Manager.
 
 ## Tech Stack
@@ -38,14 +40,19 @@ The repository also includes early folders for the target backend and infrastruc
 - Product catalog: static product data and local image assets.
 - Cart: client-side cart context.
 - Chatbot API: Next.js route handler using the OpenAI API.
+- Product API Lambda: `GET /products` and `GET /products/{id}` backed by DynamoDB SDK v3.
+- Order processing Lambda: SQS event handler that stores pending order records in DynamoDB.
+- Payment webhook Lambda: Stripe checkout completion handler that publishes `PaymentSucceeded` events to EventBridge.
 - Infrastructure: partial AWS CDK skeleton under `infrastructure`.
-- Backend services: placeholder service directories under `services`.
+- Backend services: Node.js Lambda service packages under `services`.
 - App location: `apps/web`.
 
 ## Repository Structure
 
 ```text
 music-instrument-store/
+|-- package.json                     # npm workspace root
+|-- package-lock.json                # workspace lockfile
 |-- apps/
 |   `-- web/                         # Next.js web app
 |       |-- app/                     # App Router pages, API routes, components, context
@@ -53,16 +60,23 @@ music-instrument-store/
 |       |-- package.json
 |       `-- README.md
 |-- infrastructure/
+|   |-- bin/
+|   |   `-- app.ts                   # CDK app entrypoint
+|   |-- package.json
 |   `-- lib/
 |       |-- edge-stack.ts            # Placeholder edge stack
 |       `-- security-stack.ts        # CDK stack for Stripe secrets
+|-- packages/
+|   |-- db-models/                   # Shared DynamoDB record models
+|   `-- shared-types/                # Shared TypeScript interfaces
 |-- services/
-|   |-- chatbot-backend/             # Placeholder chatbot backend
-|   |-- checkout-service/            # Placeholder checkout service
-|   |-- notification-service/        # Placeholder notification service
-|   `-- product-services/            # Placeholder product services
+|   |-- chatbot-backend/             # Chatbot Lambda package
+|   |-- notification/                # Notification Lambda package
+|   |-- order-processing/            # SQS order processing Lambda
+|   |-- payment-webhook/             # Stripe webhook Lambda
+|   `-- product-api/                 # Product API Gateway Lambda
 |-- LICENSE
-|-- README_END.md
+|-- README_ENG.md
 `-- README_VI.md
 ```
 
@@ -81,10 +95,9 @@ cd music-instrument-store
 git checkout dev
 ```
 
-Install dependencies:
+Install workspace dependencies from the repository root:
 
 ```bash
-cd apps/web
 npm install
 ```
 
@@ -109,10 +122,10 @@ STRIPE_WEBHOOK_SECRET=
 NEXT_PUBLIC_AWS_COGNITO_CLIENT_ID=
 ```
 
-Run the development server:
+Run the web development server:
 
 ```bash
-npm run dev
+npm run dev:web
 ```
 
 Open:
@@ -123,7 +136,15 @@ http://localhost:3000
 
 ## Available Scripts
 
-Run from `apps/web`:
+Run from the repository root:
+
+```bash
+npm run dev:web
+npm run build
+npm run lint
+```
+
+Run from `apps/web` when working only on the frontend:
 
 ```bash
 npm run dev
@@ -131,6 +152,26 @@ npm run build
 npm run start
 npm run lint
 ```
+
+## Backend Services
+
+The implemented Lambda entrypoints are:
+
+- `services/product-api/index.ts`
+  - API Gateway proxy handler.
+  - `GET /products` scans DynamoDB for records whose `pk` begins with `PRODUCT#`.
+  - `GET /products/{id}` queries DynamoDB for `pk = PRODUCT#{id}`.
+  - Required environment variable: `TABLE_NAME`.
+- `services/order-processing/index.ts`
+  - SQS handler using `SQSHandler` from `aws-lambda`.
+  - Parses each SQS record body as an order payload.
+  - Writes pending order records to DynamoDB with `pk = ORDER#{id}` and `sk = STATUS#PENDING`.
+  - Required environment variable: `TABLE_NAME`.
+- `services/payment-webhook/index.ts`
+  - API Gateway proxy handler for `POST /webhooks/stripe`.
+  - Includes a placeholder for Stripe signature verification.
+  - Publishes `checkout.session.completed` payloads to EventBridge with source `com.musicstore.payment` and detail type `PaymentSucceeded`.
+  - Required environment variables: `EVENT_BUS_NAME`, `STRIPE_WEBHOOK_SECRET`.
 
 ## Key Routes
 
