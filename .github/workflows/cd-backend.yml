@@ -7,34 +7,28 @@ on:
       - 'infrastructure/**'
       - 'services/**'
 
-permissions:
-  id-token: write
-  contents: read
-
 jobs:
   deploy:
-    name: Deploy Backend Infrastructure
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          node-version: 24
-          cache: npm
+          node-version: '24'
+          cache: 'npm'
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v6
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-southeast-1
-          role-to-assume: arn:aws:iam::<YOUR_AWS_ACCOUNT_ID>:role/GitHubActionsDeployRole
 
-      - name: Install dependencies
+      - name: Install Dependencies
         run: npm ci
 
-      - name: Deploy CDK stacks
+      - name: CDK Deploy
         working-directory: infrastructure
         run: npx cdk deploy --all --require-approval never
