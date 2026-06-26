@@ -29,7 +29,11 @@ jobs:
       - name: Install Dependencies
         working-directory: infrastructure
         run: npm ci
-
+      - name: CDK Bootstrap
+        working-directory: infrastructure
+        env:
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+        run: npx cdk bootstrap aws://${AWS_ACCOUNT_ID}/ap-southeast-1
       - name: CDK Deploy
         working-directory: infrastructure
         run: npx cdk deploy --all --require-approval never
