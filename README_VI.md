@@ -179,6 +179,11 @@ Kế hoạch production gồm:
 - CloudWatch, CloudTrail, X-Ray và GuardDuty cho logs, audit, tracing, alarms và threat detection.
 - AWS Backup cho backup và restore DynamoDB.
 
+## Triển Khai
+
+Chi tiết cách triển khai Next.js frontend lên AWS Amplify Hosting:
+*   Xem [Hướng Dẫn Triển Khai AWS Amplify](file:///E:/Project/repo/music-instrument-store/docs/huong_dan_trien_khai_amplify.md) để biết cách thiết lập trên AWS Console, cấu hình biến môi trường và xử lý sự cố.
+
 ## Lộ Trình
 
 - Thay dữ liệu catalog tĩnh bằng Product Service dùng DynamoDB và S3.
@@ -188,3 +193,4 @@ Kế hoạch production gồm:
 - Thêm SQS, DLQ và EventBridge cho xử lý đơn hàng và thông báo bất đồng bộ.
 - Mở rộng Infrastructure as Code cho tài nguyên AWS.
 - Thêm CI/CD pipelines, smoke tests, dashboard, alarm, tracing, backup và runbook.
+

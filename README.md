@@ -222,6 +222,11 @@ The planned production architecture includes:
 - CloudWatch, CloudTrail, X-Ray, and GuardDuty for logs, audit, tracing, alarms, and threat detection.
 - AWS Backup for DynamoDB backup and restore procedures.
 
+## Deployment
+
+For details on how to deploy the Next.js frontend to AWS Amplify Hosting, please refer to:
+*   [AWS Amplify Deployment Guide (Vietnamese)](file:///E:/Project/repo/music-instrument-store/docs/huong_dan_trien_khai_amplify.md)
+
 ## Roadmap
 
 - Replace static catalog data with a Product Service backed by DynamoDB and S3.
@@ -231,3 +236,4 @@ The planned production architecture includes:
 - Add SQS, DLQ, and EventBridge for asynchronous order and notification processing.
 - Expand Infrastructure as Code for AWS resources.
 - Add CI/CD pipelines, smoke tests, dashboards, alarms, tracing, backup, and runbooks.
+
