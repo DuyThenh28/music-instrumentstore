@@ -54,7 +54,9 @@ try {
   }
 
   const outputs = JSON.parse(fs.readFileSync(outputsPath, "utf8")) as CdkOutputs;
-  const envEntries = outputMappings.map(({ envName, outputKeys }) => {
+  const newValues: Record<string, string> = {};
+
+  for (const { envName, outputKeys } of outputMappings) {
     const value = findOutputValue(outputs, outputKeys);
 
     if (!value) {
@@ -65,11 +67,47 @@ try {
       );
     }
 
-    return `${envName}=${value}`;
+    newValues[envName] = value;
+  }
+
+  // Load existing env file content if it exists to avoid overwriting manually set keys
+  let existingContent = "";
+  if (fs.existsSync(envPath)) {
+    existingContent = fs.readFileSync(envPath, "utf8");
+  }
+
+  const lines = existingContent.split(/\r?\n/);
+  const updatedKeys = new Set<string>();
+  const newLines = lines.map((line) => {
+    const match = line.match(/^([^=]+)=(.*)$/);
+    if (match) {
+      const key = match[1].trim();
+      if (key in newValues) {
+        updatedKeys.add(key);
+        return `${key}=${newValues[key]}`;
+      }
+    }
+    return line;
   });
 
-  fs.writeFileSync(envPath, `${envEntries.join("\n")}\n`);
-  console.log(`Generated ${envPath}`);
+  // Append any keys that weren't in the existing env file
+  for (const envName of Object.keys(newValues)) {
+    if (!updatedKeys.has(envName)) {
+      if (newLines.length > 0 && newLines[newLines.length - 1].trim() !== "") {
+        newLines.push("");
+      }
+      newLines.push(`${envName}=${newValues[envName]}`);
+      updatedKeys.add(envName);
+    }
+  }
+
+  let finalContent = newLines.join("\n");
+  if (!finalContent.endsWith("\n")) {
+    finalContent += "\n";
+  }
+
+  fs.writeFileSync(envPath, finalContent);
+  console.log(`Generated/Updated ${envPath}`);
 } catch (error) {
   console.error(
     `Failed to generate .env.local: ${

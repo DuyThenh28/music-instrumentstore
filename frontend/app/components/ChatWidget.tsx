@@ -45,7 +45,8 @@ export default function ChatWidget() {
       }
 
       // 2. Gửi request trực tiếp đến API Gateway Endpoint (Thay URL này bằng API ID thực tế của bạn)
-      const API_GATEWAY_URL = process.env.NEXT_PUBLIC_API_GATEWAY_URL || "https://<api-id>.execute-api.us-east-1.amazonaws.com/prod/chat";
+      const baseUrl = process.env.NEXT_PUBLIC_API_GATEWAY_URL || "https://<api-id>.execute-api.us-east-1.amazonaws.com/prod/";
+      const API_GATEWAY_URL = baseUrl.replace(/\/$/, "") + "/chat";
       
       const res = await fetch(API_GATEWAY_URL, {
         method: "POST",

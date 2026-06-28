@@ -2,37 +2,41 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { signIn } from "@aws-amplify/auth";
+import { useRouter } from "next/navigation";
 
 export default function Login() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    const savedUser = JSON.parse(localStorage.getItem("user") || "null");
 
     if (!email || !password) {
       alert("Vui lòng nhập email và mật khẩu!");
       return;
     }
 
-    if (!savedUser) {
-      alert("Bạn chưa có tài khoản. Vui lòng đăng ký trước!");
-      window.location.href = "/register";
-      return;
+    setIsSubmitting(true);
+    try {
+      await signIn({
+        username: email,
+        password: password,
+      });
+
+      alert("Đăng nhập thành công!");
+      // Redirect to home page and refresh to update AuthNav state
+      router.refresh();
+      window.location.href = "/";
+    } catch (err) {
+      const error = err as Error;
+      console.error("Login error:", error);
+      alert(error.message || "Tên đăng nhập hoặc mật khẩu không đúng!");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    if (savedUser.email !== email || savedUser.password !== password) {
-      alert("Email hoặc mật khẩu không đúng!");
-      return;
-    }
-
-    localStorage.setItem("isLogin", "true");
-    localStorage.setItem("currentUser", JSON.stringify(savedUser));
-
-    alert("Đăng nhập thành công!");
-    window.location.href = "/";
   };
 
   return (
@@ -50,6 +54,7 @@ export default function Login() {
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          disabled={isSubmitting}
         />
 
         <input
@@ -57,9 +62,12 @@ export default function Login() {
           placeholder="Mật khẩu"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          disabled={isSubmitting}
         />
 
-        <button type="submit">Đăng Nhập</button>
+        <button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Đang xử lý..." : "Đăng Nhập"}
+        </button>
 
         <p className="login-register">
           Chưa có tài khoản? <Link href="/register">Đăng ký ngay</Link>

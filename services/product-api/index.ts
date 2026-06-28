@@ -4,6 +4,8 @@ import {
   DynamoDBDocumentClient,
   GetCommand,
   ScanCommand,
+  PutCommand,
+  DeleteCommand,
 } from "@aws-sdk/lib-dynamodb";
 
 type ProductItem = {
@@ -31,6 +33,7 @@ const jsonResponse = (
   headers: {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "Content-Type,Authorization",
+    "Access-Control-Allow-Methods": "OPTIONS,GET,POST,PUT,DELETE",
     "Content-Type": "application/json",
   },
   body: JSON.stringify(body),
@@ -58,14 +61,115 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       throw new Error("TABLE_NAME environment variable is not set");
     }
 
-    if (event.httpMethod !== "GET") {
-      return jsonResponse(405, { message: "Method Not Allowed" });
+    if (event.httpMethod === "OPTIONS") {
+      return jsonResponse(204, {});
     }
 
     const productId = getProductId(event.path, event.pathParameters?.id);
 
-    if (productId) {
-      const result = await dynamoDb.send(
+    // 1. GET requests
+    if (event.httpMethod === "GET") {
+      if (productId) {
+        const result = await dynamoDb.send(
+          new GetCommand({
+            TableName: tableName,
+            Key: {
+              PK: `PRODUCT#${productId}`,
+              SK: "METADATA",
+            },
+          })
+        );
+
+        if (!result.Item) {
+          return jsonResponse(404, { message: "Product not found" });
+        }
+
+        return jsonResponse(200, {
+          product: stripTableKeys(result.Item as ProductItem),
+        });
+      }
+
+      const items: ProductItem[] = [];
+      let ExclusiveStartKey: Record<string, unknown> | undefined;
+
+      do {
+        const result = await dynamoDb.send(
+          new ScanCommand({
+            TableName: tableName,
+            FilterExpression: "begins_with(#pk, :productPrefix)",
+            ExpressionAttributeNames: {
+              "#pk": "PK",
+            },
+            ExpressionAttributeValues: {
+              ":productPrefix": "PRODUCT#",
+            },
+            ExclusiveStartKey,
+          })
+        );
+
+        items.push(...((result.Items ?? []) as ProductItem[]));
+        ExclusiveStartKey = result.LastEvaluatedKey;
+      } while (ExclusiveStartKey);
+
+      const products = items
+        .map((item) => stripTableKeys(item))
+        .sort((a, b) => Number(a.id) - Number(b.id));
+
+      return jsonResponse(200, products);
+    }
+
+    // 2. POST request (Create Product)
+    if (event.httpMethod === "POST") {
+      if (!event.body) {
+        return jsonResponse(400, { message: "Invalid request: Missing body" });
+      }
+
+      const body = JSON.parse(event.body) as ProductItem;
+      const { id, name, brand, type, price, imageUrl, description } = body;
+
+      if (!id || !name || !brand || typeof price !== "number" || !imageUrl || !description) {
+        return jsonResponse(400, { message: "Missing required fields" });
+      }
+
+      const now = new Date().toISOString();
+      const newItem: ProductItem = {
+        PK: `PRODUCT#${id}`,
+        SK: "METADATA",
+        id,
+        name,
+        brand,
+        type,
+        price,
+        imageUrl,
+        description,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      await dynamoDb.send(
+        new PutCommand({
+          TableName: tableName,
+          Item: newItem,
+        })
+      );
+
+      return jsonResponse(201, stripTableKeys(newItem));
+    }
+
+    // 3. PUT request (Update Product)
+    if (event.httpMethod === "PUT") {
+      if (!productId) {
+        return jsonResponse(400, { message: "Missing product ID in path" });
+      }
+
+      if (!event.body) {
+        return jsonResponse(400, { message: "Invalid request: Missing body" });
+      }
+
+      const body = JSON.parse(event.body) as Partial<ProductItem>;
+      
+      // Get existing product to update
+      const existing = await dynamoDb.send(
         new GetCommand({
           TableName: tableName,
           Key: {
@@ -75,33 +179,50 @@ export const handler: APIGatewayProxyHandler = async (event) => {
         })
       );
 
-      if (!result.Item) {
+      if (!existing.Item) {
         return jsonResponse(404, { message: "Product not found" });
       }
 
-      return jsonResponse(200, {
-        product: stripTableKeys(result.Item as ProductItem),
-      });
+      const now = new Date().toISOString();
+      const updatedItem: ProductItem = {
+        ...(existing.Item as ProductItem),
+        ...body,
+        PK: `PRODUCT#${productId}`,
+        SK: "METADATA",
+        id: productId,
+        updatedAt: now,
+      };
+
+      await dynamoDb.send(
+        new PutCommand({
+          TableName: tableName,
+          Item: updatedItem,
+        })
+      );
+
+      return jsonResponse(200, stripTableKeys(updatedItem));
     }
 
-    const result = await dynamoDb.send(
-      new ScanCommand({
-        TableName: tableName,
-        FilterExpression: "begins_with(#pk, :productPrefix)",
-        ExpressionAttributeNames: {
-          "#pk": "PK",
-        },
-        ExpressionAttributeValues: {
-          ":productPrefix": "PRODUCT#",
-        },
-      })
-    );
+    // 4. DELETE request (Delete Product)
+    if (event.httpMethod === "DELETE") {
+      if (!productId) {
+        return jsonResponse(400, { message: "Missing product ID in path" });
+      }
 
-    const products = (result.Items ?? [])
-      .map((item) => stripTableKeys(item as ProductItem))
-      .sort((a, b) => Number(a.id) - Number(b.id));
+      await dynamoDb.send(
+        new DeleteCommand({
+          TableName: tableName,
+          Key: {
+            PK: `PRODUCT#${productId}`,
+            SK: "METADATA",
+          },
+        })
+      );
 
-    return jsonResponse(200, products);
+      return jsonResponse(200, { message: "Product deleted successfully" });
+    }
+
+    return jsonResponse(405, { message: "Method Not Allowed" });
   } catch (error) {
     console.error("Product API handler failed", {
       error,

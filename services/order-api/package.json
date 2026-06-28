@@ -1,0 +1,17 @@
+{
+  "name": "@music-store/order-api",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "build": "echo \"order-api has no build step yet\"",
+    "test": "echo \"No tests configured for order-api\""
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.1075.0",
+    "@aws-sdk/lib-dynamodb": "^3.1075.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.152"
+  }
+}

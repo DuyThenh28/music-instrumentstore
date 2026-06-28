@@ -64,6 +64,7 @@ export default function Cart() {
     useState<CartState>(getInitialCartState);
   const [showCheckout, setShowCheckout] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("COD");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [customer, setCustomer] = useState<Customer>({
     name: "",
@@ -88,10 +89,8 @@ export default function Cart() {
         typeof updater === "function" ? updater(prev.selectedItems) : updater,
     }));
   };
-
-  const getPriceNumber = (price: string) => {
-    return Number(String(price).replaceAll(".", "").replace("đ", ""));
-  };
+  const getPriceNumber = (price: string) =>
+    Number(String(price).replace(/[^\d]/g, ""));
 
   const toggleSelectItem = (index: number) => {
     if (selectedItems.includes(index)) {
@@ -168,14 +167,14 @@ export default function Cart() {
     0
   );
 
-  const confirmOrder = () => {
+  const confirmOrder = async () => {
     if (selectedItems.length === 0) {
       alert("Vui lòng chọn ít nhất 1 sản phẩm để thanh toán");
       return;
     }
 
     if (!customer.name || !customer.phone || !customer.address) {
-      alert("Vui lòng nhập đầy đủ họ tên, số điện thoại và địa chỉ");
+      alert("Vui lòng nhập đầy đủ họ tên, số điện thoại và địa chỉ nhận hàng");
       return;
     }
 
@@ -184,41 +183,76 @@ export default function Cart() {
       return;
     }
 
-    const oldOrders = JSON.parse(localStorage.getItem("orders") || "[]") as Order[];
-    const orderTimestamp = createOrderTimestamp();
+    setIsSubmitting(true);
 
-    const newOrder: Order = {
-      id: orderTimestamp.id,
-      customer,
-      paymentMethod,
-      products: selectedCart,
-      totalItems,
-      totalPrice,
-      status: "Chờ xác nhận",
-      createdAt: orderTimestamp.createdAt,
-    };
+    try {
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          customer,
+          paymentMethod,
+          items: selectedCart.map((item) => ({
+            productId: String(item.id),
+            name: item.name,
+            price: getPriceNumber(item.price),
+            quantity: item.quantity ?? 1,
+            imageUrl: item.image,
+          })),
+        }),
+      });
 
-    localStorage.setItem(
-      "orders",
-      JSON.stringify([newOrder, ...oldOrders])
-    );
+      if (!response.ok) {
+        throw new Error(`Order API returned ${response.status}`);
+      }
 
-    const remainingCart = cart.filter(
-      (_, index) => !selectedItems.includes(index)
-    );
+      const result = (await response.json()) as {
+        orderId?: string;
+        status?: string;
+      };
+      const oldOrders = JSON.parse(localStorage.getItem("orders") || "[]") as Order[];
+      const orderTimestamp = createOrderTimestamp();
 
-    setShowCheckout(false);
-    saveCart(remainingCart);
-    setSelectedItems([]);
+      const newOrder: Order = {
+        id: result.orderId ?? orderTimestamp.id,
+        customer,
+        paymentMethod,
+        products: selectedCart,
+        totalItems,
+        totalPrice,
+        status: result.status ?? "PENDING",
+        createdAt: orderTimestamp.createdAt,
+      };
 
-    setCustomer({
-      name: "",
-      phone: "",
-      address: "",
-      note: "",
-    });
+      localStorage.setItem(
+        "orders",
+        JSON.stringify([newOrder, ...oldOrders])
+      );
 
-    router.push("/orders");
+      const remainingCart = cart.filter(
+        (_, index) => !selectedItems.includes(index)
+      );
+
+      setShowCheckout(false);
+      saveCart(remainingCart);
+      setSelectedItems([]);
+
+      setCustomer({
+        name: "",
+        phone: "",
+        address: "",
+        note: "",
+      });
+
+      router.push("/orders");
+    } catch (error) {
+      console.error("Failed to create order", error);
+      alert("Không thể tạo đơn hàng. Vui lòng thử lại.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -248,7 +282,7 @@ export default function Cart() {
                   }
                   onChange={toggleSelectAll}
                 />
-                <span>🛍️ NhomTTTN Music</span>
+                <span>🛍️ Nhóm TTTN Music</span>
               </label>
 
               <strong>{totalItems} sản phẩm đã chọn</strong>
@@ -453,8 +487,9 @@ export default function Cart() {
               <button
                 className="confirm-order-btn"
                 onClick={confirmOrder}
+                disabled={isSubmitting}
               >
-                Xác nhận đặt hàng
+                {isSubmitting ? "Đang gửi..." : "Xác nhận đặt hàng"}
               </button>
 
               <button
