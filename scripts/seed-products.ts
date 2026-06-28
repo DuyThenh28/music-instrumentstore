@@ -8,23 +8,35 @@ const {
   DynamoDBDocumentClient,
 } = require("@aws-sdk/lib-dynamodb") as typeof import("@aws-sdk/lib-dynamodb");
 
-type Product = {
-  id: string;
+type ProductSeed = {
+  id: string | number;
   name: string;
   brand: string;
+  type: string;
   price: number;
-  imageUrl: string;
+  imagePath?: string;
+  image?: string;
+  imageUrl?: string;
   description: string;
 };
 
-type ProductSeed = Omit<Product, "imageUrl"> & {
-  imagePath: string;
+type ProductItem = {
+  PK: string;
+  SK: "METADATA";
+  id: string;
+  name: string;
+  brand: string;
   type: string;
+  price: number;
+  imageUrl: string;
+  description: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 type BatchWriteRequest = {
   PutRequest: {
-    Item: Record<string, unknown>;
+    Item: ProductItem;
   };
 };
 
@@ -57,119 +69,80 @@ const loadEnvFile = (filePath: string) => {
 
 envFiles.forEach(loadEnvFile);
 
-const tableName = process.env.PRODUCTS_TABLE_NAME ?? process.env.TABLE_NAME;
+const tableName = (process.env.PRODUCTS_TABLE_NAME ?? process.env.TABLE_NAME) as string;
 const awsRegion = process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION;
 const imageBaseUrl = process.env.PRODUCT_IMAGE_BASE_URL;
 
-const products: ProductSeed[] = [
-  {
-    id: "1",
-    name: "Yamaha YAS-280",
-    brand: "Yamaha",
-    type: "Alto Saxophone",
-    price: 35800000,
-    imagePath: "/images/yamaha-yas280.jpg",
-    description:
-      "Student alto saxophone with reliable intonation, light key action, and a clear Yamaha tone.",
-  },
-  {
-    id: "2",
-    name: "Selmer AS500",
-    brand: "Selmer",
-    type: "Alto Saxophone",
-    price: 51000000,
-    imagePath: "/images/selmer-as500.jpg",
-    description:
-      "Warm alto saxophone for advancing players who need dependable response and strong projection.",
-  },
-  {
-    id: "3",
-    name: "Conn AS650",
-    brand: "Conn",
-    type: "Alto Saxophone",
-    price: 12000000,
-    imagePath: "/images/conn-as650.jpg",
-    description:
-      "Affordable alto saxophone with sturdy construction for beginner lessons and daily practice.",
-  },
-  {
-    id: "4",
-    name: "Yamaha YTS-280",
-    brand: "Yamaha",
-    type: "Tenor Saxophone",
-    price: 42000000,
-    imagePath: "/images/yamaha-yts280.jpg",
-    description:
-      "Tenor saxophone with balanced resistance, durable build quality, and comfortable ergonomics.",
-  },
-  {
-    id: "5",
-    name: "Selmer TS400",
-    brand: "Selmer",
-    type: "Tenor Saxophone",
-    price: 58000000,
-    imagePath: "/images/selmer-ts400.jpg",
-    description:
-      "Expressive tenor saxophone with a focused sound and smooth mechanism for developing musicians.",
-  },
-  {
-    id: "6",
-    name: "Jupiter JTS700",
-    brand: "Jupiter",
-    type: "Tenor Saxophone",
-    price: 35000000,
-    imagePath: "/images/jupiter-jts700.jpg",
-    description:
-      "Reliable tenor saxophone suited for school bands, ensemble rehearsals, and stage performance.",
-  },
-  {
-    id: "7",
-    name: "Yamaha YSS-475",
-    brand: "Yamaha",
-    type: "Soprano Saxophone",
-    price: 56000000,
-    imagePath: "/images/yamaha-yss475.jpg",
-    description:
-      "Intermediate soprano saxophone with refined response, clean projection, and stable pitch.",
-  },
-  {
-    id: "8",
-    name: "Yanagisawa S901",
-    brand: "Yanagisawa",
-    type: "Soprano Saxophone",
-    price: 72000000,
-    imagePath: "/images/yanagisawa-s901.jpg",
-    description:
-      "Premium soprano saxophone with precise intonation and a flexible, expressive tone.",
-  },
-  {
-    id: "9",
-    name: "Jupiter JAS700",
-    brand: "Jupiter",
-    type: "Alto Saxophone",
-    price: 31000000,
-    imagePath: "/images/jupiter-jas700.jpg",
-    description:
-      "Student-friendly alto saxophone with sturdy keywork and an even tone across registers.",
-  },
-  {
-    id: "10",
-    name: "Yanagisawa AWO1",
-    brand: "Yanagisawa",
-    type: "Alto Saxophone",
-    price: 68000000,
-    imagePath: "/images/yanagisawa-awo1.jpg",
-    description:
-      "Professional alto saxophone with precise response, rich tonal color, and premium build quality.",
-  },
-];
+const defaultMockDataPath = fs.existsSync(path.join(repoRoot, "scripts", "mock-data.json"))
+  ? path.join(repoRoot, "scripts", "mock-data.json")
+  : path.join(repoRoot, "scripts", "product-catalog.json");
 
-const toImageUrl = (imagePath: string) => {
-  if (!imageBaseUrl) {
-    return imagePath;
+const mockDataPath = path.resolve(
+  repoRoot,
+  process.env.MOCK_DATA_PATH ?? defaultMockDataPath
+);
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
+const isProductSeed = (value: unknown): value is ProductSeed => {
+  if (!isRecord(value)) {
+    return false;
   }
 
-  return `${imageBaseUrl.replace(/\/$/, "")}/${imagePath.replace(/^\//, "")}`;
+  return (
+    (typeof value.id === "string" || typeof value.id === "number") &&
+    typeof value.name === "string" &&
+    typeof value.brand === "string" &&
+    typeof value.type === "string" &&
+    typeof value.price === "number" &&
+    typeof value.description === "string" &&
+    (typeof value.imagePath === "string" ||
+      typeof value.image === "string" ||
+      typeof value.imageUrl === "string")
+  );
+};
+
+const readProducts = (): ProductSeed[] => {
+  const raw = fs.readFileSync(mockDataPath, "utf8");
+  const parsed: unknown = JSON.parse(raw);
+  const products = Array.isArray(parsed)
+    ? parsed
+    : isRecord(parsed) && Array.isArray(parsed.products)
+      ? parsed.products
+      : undefined;
+
+  if (!products) {
+    throw new Error(
+      `Expected ${mockDataPath} to contain a product array or { "products": [...] }.`
+    );
+  }
+
+  const invalidIndex = products.findIndex((product) => !isProductSeed(product));
+
+  if (invalidIndex !== -1) {
+    throw new Error(`Invalid product at index ${invalidIndex} in ${mockDataPath}.`);
+  }
+
+  return products;
+};
+
+const toImageUrl = (product: ProductSeed) => {
+  const source = product.imageUrl ?? product.imagePath ?? product.image;
+
+  if (!source) {
+    throw new Error(`Product ${product.id} is missing an image path.`);
+  }
+
+  if (/^https?:\/\//i.test(source)) {
+    return source;
+  }
+
+  if (!imageBaseUrl) {
+    throw new Error("PRODUCT_IMAGE_BASE_URL is required for local image paths.");
+  }
+
+  return `${imageBaseUrl.replace(/\/$/, "")}/${source.replace(/^\//, "")}`;
 };
 
 const chunkItems = <T>(items: T[], size: number) => {
@@ -212,25 +185,30 @@ const seedProducts = async () => {
   }
 
   const now = new Date().toISOString();
-  const items = products.map((product) => ({
-    PK: `PRODUCT#${product.id}`,
-    SK: "METADATA",
-    id: product.id,
-    name: product.name,
-    brand: product.brand,
-    type: product.type,
-    price: product.price,
-    imageUrl: toImageUrl(product.imagePath),
-    description: product.description,
-    createdAt: now,
-    updatedAt: now,
-  }));
+  const products = readProducts();
+  const items: ProductItem[] = products.map((product) => {
+    const id = String(product.id);
+
+    return {
+      PK: `PRODUCT#${id}`,
+      SK: "METADATA",
+      id,
+      name: product.name,
+      brand: product.brand,
+      type: product.type,
+      price: product.price,
+      imageUrl: toImageUrl(product),
+      description: product.description,
+      createdAt: now,
+      updatedAt: now,
+    };
+  });
 
   const client = DynamoDBDocumentClient.from(
     new DynamoDBClient({ region: awsRegion })
   );
 
-  console.log(`Seeding ${items.length} products into ${tableName}...`);
+  console.log(`Seeding ${items.length} products from ${mockDataPath} into ${tableName}...`);
 
   for (const chunk of chunkItems(items, 25)) {
     await writeBatch(

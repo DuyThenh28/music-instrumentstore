@@ -4,6 +4,8 @@ import CartButton from "./components/CartButton";
 import ChatWidget from "./components/ChatWidget";
 import { Poppins } from "next/font/google";
 import Link from "next/link";
+import AmplifyConfig from "./components/AmplifyConfig";
+import AuthNav from "./components/AuthNav";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -11,7 +13,7 @@ const poppins = Poppins({
 });
 
 export const metadata = {
-  title: "NhomTTTN Music",
+  title: "Nhóm TTTN Music",
   description: "Website bán Saxophone chính hãng",
 };
 
@@ -23,10 +25,11 @@ export default function RootLayout({
   return (
     <html lang="vi">
       <body className={poppins.className}>
-        <CartProvider>
+        <AmplifyConfig>
+          <CartProvider>
           <header className="header">
             <Link href="/" className="logo">
-              <h1>NhomTTTN Music</h1>
+              <h1>Nhóm TTTN Music</h1>
               <p>Website bán nhạc cụ & Saxophone</p>
             </Link>
 
@@ -46,8 +49,7 @@ export default function RootLayout({
             <Link href="/products">Sản Phẩm</Link>
             <Link href="/cart">Giỏ Hàng</Link>
             <Link href="/orders">Đơn Đã Mua</Link>
-            <Link href="/login">Đăng Nhập</Link>
-            <Link href="/register">Đăng Ký</Link>
+            <AuthNav />
             <Link href="/admin">Admin</Link>
           </nav>
 
@@ -58,7 +60,7 @@ export default function RootLayout({
           <footer className="footer">
             <div className="footer-container">
               <div className="footer-column">
-                <h3>NhomTTTN Music</h3>
+                <h3>Nhóm TTTN Music</h3>
                 <p>Chuyên cung cấp Saxophone chính hãng.</p>
                 <p>📍 TP. Hồ Chí Minh, Việt Nam</p>
                 <p>📞 0912 19 12 18</p>
@@ -106,10 +108,11 @@ export default function RootLayout({
             </div>
 
             <div className="footer-bottom">
-              © 2026 NhomTTTN Music | AWS Cloud Project
+              © 2026 Nhóm TTTN Music | AWS Cloud Project
             </div>
-          </footer>
-        </CartProvider>
+            </footer>
+          </CartProvider>
+        </AmplifyConfig>
       </body>
     </html>
   );

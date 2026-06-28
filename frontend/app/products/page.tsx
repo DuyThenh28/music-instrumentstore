@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import type { Product } from "../../types/product";
+import { getProducts } from "../../lib/products";
 
 type ProductsPageProps = {
   searchParams?: Promise<{
@@ -9,77 +9,11 @@ type ProductsPageProps = {
   }>;
 };
 
-type ProductsResult = {
-  products: Product[];
-  error?: string;
-};
-
 const currencyFormatter = new Intl.NumberFormat("vi-VN", {
   style: "currency",
   currency: "VND",
   maximumFractionDigits: 0,
 });
-
-const isProduct = (value: unknown): value is Product => {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  const product = value as Record<string, unknown>;
-
-  return (
-    typeof product.id === "string" &&
-    typeof product.name === "string" &&
-    typeof product.brand === "string" &&
-    typeof product.price === "number" &&
-    typeof product.imageUrl === "string" &&
-    typeof product.description === "string"
-  );
-};
-
-async function getProducts(): Promise<ProductsResult> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-
-  if (!apiUrl) {
-    return {
-      products: [],
-      error: "NEXT_PUBLIC_API_URL is not configured.",
-    };
-  }
-
-  try {
-    const response = await fetch(`${apiUrl}/products`, {
-      next: {
-        revalidate: 300,
-      },
-    });
-
-    if (!response.ok) {
-      return {
-        products: [],
-        error: `Product API returned ${response.status}.`,
-      };
-    }
-
-    const data: unknown = await response.json();
-
-    if (!Array.isArray(data)) {
-      return {
-        products: [],
-        error: "Product API returned an unexpected response.",
-      };
-    }
-
-    return {
-      products: data.filter(isProduct),
-    };
-  } catch {
-    return {
-      products: [],
-      error: "Unable to load products right now.",
-    };
-  }
-}
 
 const getQuery = async (searchParams?: ProductsPageProps["searchParams"]) => {
   const params = searchParams ? await searchParams : {};
@@ -140,7 +74,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
 
             <p className="price">{currencyFormatter.format(product.price)}</p>
 
-            <button type="button">Add to Cart</button>
+            <button type="button">Thêm vào giỏ hàng</button>
           </article>
         ))}
       </section>
