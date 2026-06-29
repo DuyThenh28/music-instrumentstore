@@ -10,6 +10,11 @@ import * as events from "aws-cdk-lib/aws-events";
 import * as sqs from "aws-cdk-lib/aws-sqs";
 import * as lambdaEventSources from "aws-cdk-lib/aws-lambda-event-sources";
 import * as targets from "aws-cdk-lib/aws-events-targets";
+import * as logs from "aws-cdk-lib/aws-logs";
+import * as cw from "aws-cdk-lib/aws-cloudwatch";
+import * as cw_actions from "aws-cdk-lib/aws-cloudwatch-actions";
+import * as sns from "aws-cdk-lib/aws-sns";
+import * as sns_subscriptions from "aws-cdk-lib/aws-sns-subscriptions";
 import { Construct } from "constructs";
 
 interface BackendProps extends cdk.StackProps {
@@ -68,6 +73,8 @@ export class BackendStack extends cdk.Stack {
         TABLE_NAME: props.productsTable.tableName,
         BUCKET_NAME: props.productsBucket.bucketName,
       },
+      tracing: lambda.Tracing.ACTIVE,
+      logRetention: logs.RetentionDays.ONE_WEEK,
     });
 
     // Order API Lambda (Đẩy đơn hàng vào SQS)
@@ -78,6 +85,8 @@ export class BackendStack extends cdk.Stack {
       environment: {
         ORDER_QUEUE_URL: orderQueue.queueUrl,
       },
+      tracing: lambda.Tracing.ACTIVE,
+      logRetention: logs.RetentionDays.ONE_WEEK,
     });
 
     // Order Processing Lambda (Đọc SQS và lưu vào DynamoDB)
@@ -89,6 +98,8 @@ export class BackendStack extends cdk.Stack {
         TABLE_NAME: props.productsTable.tableName,
         EVENT_BUS_NAME: eventBus.eventBusName,
       },
+      tracing: lambda.Tracing.ACTIVE,
+      logRetention: logs.RetentionDays.ONE_WEEK,
     });
 
     // Checkout Service Lambda (Stripe integration)
@@ -99,6 +110,8 @@ export class BackendStack extends cdk.Stack {
       environment: {
         STRIPE_SECRET_KEY: props.stripeSecrets.secretValueFromJson("STRIPE_SECRET_KEY").toString(),
       },
+      tracing: lambda.Tracing.ACTIVE,
+      logRetention: logs.RetentionDays.ONE_WEEK,
     });
 
     // Chatbot AI Lambda (Amazon Lex integration)
@@ -110,6 +123,8 @@ export class BackendStack extends cdk.Stack {
         LEX_BOT_ID: process.env.LEX_BOT_ID || "dummy-bot-id",
         LEX_BOT_ALIAS_ID: process.env.LEX_BOT_ALIAS_ID || "dummy-alias-id",
       },
+      tracing: lambda.Tracing.ACTIVE,
+      logRetention: logs.RetentionDays.ONE_WEEK,
     });
 
     // Notification Service Lambda (Lắng nghe NotificationQueue hoặc gọi đồng bộ)
@@ -120,6 +135,8 @@ export class BackendStack extends cdk.Stack {
       environment: {
         TABLE_NAME: props.productsTable.tableName,
       },
+      tracing: lambda.Tracing.ACTIVE,
+      logRetention: logs.RetentionDays.ONE_WEEK,
     });
 
     // Stripe Payment Webhook Lambda
@@ -131,6 +148,8 @@ export class BackendStack extends cdk.Stack {
         STRIPE_WEBHOOK_SECRET: props.stripeSecrets.secretValueFromJson("STRIPE_WEBHOOK_SECRET").toString(),
         EVENT_BUS_NAME: eventBus.eventBusName,
       },
+      tracing: lambda.Tracing.ACTIVE,
+      logRetention: logs.RetentionDays.ONE_WEEK,
     });
 
     // 4. Đăng ký SQS triggers cho Lambda Functions
@@ -191,6 +210,11 @@ export class BackendStack extends cdk.Stack {
         allowHeaders: ["Content-Type", "Authorization"],
         allowMethods: ["OPTIONS", "GET", "POST", "PUT", "DELETE"],
         allowOrigins: apigateway.Cors.ALL_ORIGINS,
+      },
+      deployOptions: {
+        tracingEnabled: true,
+        loggingLevel: apigateway.MethodLoggingLevel.INFO,
+        dataTraceEnabled: true,
       },
     });
 
@@ -367,6 +391,65 @@ export class BackendStack extends cdk.Stack {
     new cdk.CfnOutput(this, "ApiUrl", { value: api.url });
     new cdk.CfnOutput(this, "OrderQueueUrl", { value: orderQueue.queueUrl });
     new cdk.CfnOutput(this, "NotificationQueueUrl", { value: notificationQueue.queueUrl });
+
+    // 9. Cấu hình Giám sát và Cảnh báo (CloudWatch & SNS Alarms)
+    const alarmsTopic = new sns.Topic(this, "SystemAlarmsTopic", {
+      topicName: "MusicStoreSystemAlarms",
+      displayName: "Music Store System Alarms",
+    });
+    alarmsTopic.addSubscription(new sns_subscriptions.EmailSubscription("admin@example.com"));
+
+    // Alarm cho các Dead Letter Queues (DLQ)
+    const orderDlqAlarm = new cw.Alarm(this, "OrderDLQAlarm", {
+      metric: orderDLQ.metricApproximateNumberOfMessagesVisible(),
+      threshold: 1,
+      evaluationPeriods: 1,
+      comparisonOperator: cw.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      alarmDescription: "Cảnh báo khi có tin nhắn bị lỗi trong Order DLQ",
+    });
+    orderDlqAlarm.addAlarmAction(new cw_actions.SnsAction(alarmsTopic));
+
+    const notificationDlqAlarm = new cw.Alarm(this, "NotificationDLQAlarm", {
+      metric: notificationDLQ.metricApproximateNumberOfMessagesVisible(),
+      threshold: 1,
+      evaluationPeriods: 1,
+      comparisonOperator: cw.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      alarmDescription: "Cảnh báo khi có tin nhắn bị lỗi trong Notification DLQ",
+    });
+    notificationDlqAlarm.addAlarmAction(new cw_actions.SnsAction(alarmsTopic));
+
+    // Alarm cho API Gateway 5XX Errors
+    const api5xxAlarm = new cw.Alarm(this, "Api5xxAlarm", {
+      metric: api.metricServerError({
+        period: cdk.Duration.minutes(5),
+        statistic: "Sum",
+      }),
+      threshold: 1,
+      evaluationPeriods: 1,
+      comparisonOperator: cw.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      alarmDescription: "Cảnh báo khi API Gateway trả về lỗi server 5XX",
+    });
+    api5xxAlarm.addAlarmAction(new cw_actions.SnsAction(alarmsTopic));
+
+    // Helper tạo Alarm cho lỗi Lambda
+    const createLambdaErrorAlarm = (func: lambda.Function, name: string) => {
+      const alarm = new cw.Alarm(this, `${name}ErrorAlarm`, {
+        metric: func.metricErrors({
+          period: cdk.Duration.minutes(5),
+          statistic: "Sum",
+        }),
+        threshold: 1,
+        evaluationPeriods: 1,
+        comparisonOperator: cw.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+        alarmDescription: `Cảnh báo khi Lambda function ${name} gặp lỗi`,
+      });
+      alarm.addAlarmAction(new cw_actions.SnsAction(alarmsTopic));
+    };
+
+    // Tạo cảnh báo lỗi cho các Lambda Functions quan trọng
+    createLambdaErrorAlarm(orderProcessingLambda, "OrderProcessing");
+    createLambdaErrorAlarm(checkoutApiLambda, "CheckoutApi");
+    createLambdaErrorAlarm(paymentWebhookLambda, "PaymentWebhook");
   }
 }
 
