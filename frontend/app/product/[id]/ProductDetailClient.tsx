@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable react-hooks/set-state-in-effect */
+
 import "../../components/AmplifyConfig";
 import Image from "next/image";
 import Link from "next/link";
@@ -64,25 +66,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const [isInWishlist, setIsInWishlist] = useState(false);
   const [isUpdatingWishlist, setIsUpdatingWishlist] = useState(false);
 
-  useEffect(() => {
-    // Check if user is signed in
-    const checkUser = async () => {
-      try {
-        const currentUser = await getCurrentUser();
-        setUser(currentUser);
-        
-        // Fetch wishlist status
-        fetchWishlistStatus(currentUser.userId);
-      } catch {
-        setUser(null);
-      }
-    };
-
-    checkUser();
-    fetchRatingsAndComments();
-  }, [product.id]);
-
-  const fetchWishlistStatus = async (userId: string) => {
+  const fetchWishlistStatus = async () => {
     try {
       const session = await fetchAuthSession();
       const token = session.tokens?.idToken?.toString();
@@ -94,8 +78,11 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
         },
       });
       if (res.ok) {
-        const wishlist = await res.json();
-        const found = wishlist.some((item: any) => String(item.productId) === String(product.id));
+        interface WishlistItem {
+          productId: string | number;
+        }
+        const wishlist = await res.json() as WishlistItem[];
+        const found = wishlist.some((item) => String(item.productId) === String(product.id));
         setIsInWishlist(found);
       }
     } catch (err) {
@@ -127,6 +114,25 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
       console.error("Failed to fetch reviews/comments:", err);
     }
   };
+
+  useEffect(() => {
+    // Check if user is signed in
+    const checkUser = async () => {
+      try {
+        const currentUser = await getCurrentUser();
+        setUser(currentUser);
+        
+        // Fetch wishlist status
+        fetchWishlistStatus();
+      } catch {
+        setUser(null);
+      }
+    };
+
+    checkUser();
+    fetchRatingsAndComments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product.id]);
 
   const handleAddToCart = () => {
     addToCart({

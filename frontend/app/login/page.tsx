@@ -38,11 +38,7 @@ export default function Login() {
 
     setIsSubmitting(true);
     try {
-      console.log("handleLogin: Current Amplify configuration on submit:", {
-        config: Amplify.getConfig(),
-        envUserPoolId: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID,
-        envClientId: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID,
-      });
+
       await signIn({
         username: email,
         password: password,

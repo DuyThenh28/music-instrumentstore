@@ -4,7 +4,6 @@ import "../components/AmplifyConfig";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { fetchAuthSession, getCurrentUser } from "aws-amplify/auth";
 import AddressSelector from "../components/AddressSelector";
 
@@ -33,7 +32,6 @@ const currencyFormatter = new Intl.NumberFormat("vi-VN", {
 });
 
 export default function ProfilePage() {
-  const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
@@ -47,20 +45,6 @@ export default function ProfilePage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
-
-  useEffect(() => {
-    const init = async () => {
-      try {
-        const currentUser = await getCurrentUser();
-        setIsAuthenticated(true);
-        await fetchData();
-      } catch (err) {
-        console.error("Auth check failed:", err);
-        setIsAuthenticated(false);
-      }
-    };
-    init();
-  }, []);
 
   const fetchData = async () => {
     setIsLoadingData(true);
@@ -101,6 +85,20 @@ export default function ProfilePage() {
       setIsLoadingData(false);
     }
   };
+
+  useEffect(() => {
+    const init = async () => {
+      try {
+        await getCurrentUser();
+        setIsAuthenticated(true);
+        await fetchData();
+      } catch (err) {
+        console.error("Auth check failed:", err);
+        setIsAuthenticated(false);
+      }
+    };
+    init();
+  }, []);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();

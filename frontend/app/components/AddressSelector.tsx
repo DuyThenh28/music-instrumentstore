@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
+
 import React, { useState, useEffect } from "react";
 
 interface Province {
