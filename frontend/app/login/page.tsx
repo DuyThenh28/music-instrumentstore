@@ -74,7 +74,7 @@ export default function Login() {
           </div>
         </div>
         <Image
-          className="absolute inset-0 w-full h-full object-cover transform scale-105 hover:scale-100 transition-transform duration-[10000ms] ease-out"
+          className="absolute inset-0 w-full h-full object-cover transform scale-105 hover:scale-100 transition-transform duration-10000 ease-out"
           alt="A macro cinematic shot of a professional vintage gold-lacquered saxophone resting against a deep forest green velvet chair in a dimly lit, luxurious jazz lounge. The lighting is warm and directional, catching the intricate engravings on the bell and the mother-of-pearl key touches. The background is a soft bokeh of a mahogany bar and amber-glowing lamps, evoking a high-end, sophisticated boutique atmosphere. The image is rich in texture and follows the brand's distinguished and soulful aesthetic."
           src="https://lh3.googleusercontent.com/aida-public/AB6AXuBHQJCKH0A3aaCbpuo9oQkVLzDfAc1q5qj7kkSGopzv8h87voG54uF4HV1dKsKfXK8uLNIua4hwoY-dxT-fyyZSR6qFgNCHRjBH8ri91RsveE20KDrwJuRF9g54svJLu84rbImLYWjLjCy20mVNmLYbnRzgX9TAZ45obSqrIrvlS1sSncNxWH7tiQeoC_TVxRw-NtwTzJzM9pAk3tsqxpYT2a3TSkHeUPbSUHzlCPpBr32JiQBJWm0"
           unoptimized
@@ -248,11 +248,11 @@ export default function Login() {
 
           {/* Decorative Badge for TTTN Music */}
           <div className="flex items-center justify-center pt-8 opacity-40">
-            <div className="h-[1px] bg-outline-variant flex-grow"></div>
+            <div className="h-px bg-outline-variant grow"></div>
             <span className="mx-4 font-label-sm text-[10px] uppercase tracking-[0.3em] whitespace-nowrap">
               Nhóm TTTN Music
             </span>
-            <div className="h-[1px] bg-outline-variant flex-grow"></div>
+            <div className="h-px bg-outline-variant grow"></div>
           </div>
         </div>
       </div>
