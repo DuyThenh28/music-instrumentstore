@@ -307,6 +307,137 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     }
 
     // -------------------------------------------------------------
+    // Route: /users/orders
+    // -------------------------------------------------------------
+    if (resource === "/users/orders") {
+      if (!userId) {
+        return jsonResponse(401, { message: "Unauthorized: Chưa đăng nhập" });
+      }
+
+      if (method === "GET") {
+        const result = await dynamoDb.send(
+          new QueryCommand({
+            TableName: tableName,
+            IndexName: "GSI1",
+            KeyConditionExpression: "GSI1PK = :gsi1pk AND begins_with(GSI1SK, :gsi1sk)",
+            ExpressionAttributeValues: {
+              ":gsi1pk": `USER#${userId}`,
+              ":gsi1sk": "ORDER#",
+            },
+          })
+        );
+
+        const orders = (result.Items ?? []).map((item) => {
+          const stripped = stripTableKeys(item);
+          return {
+            ...stripped,
+            createdAt: item.createdAt,
+            updatedAt: item.updatedAt,
+          };
+        });
+        return jsonResponse(200, orders);
+      }
+    }
+
+    // -------------------------------------------------------------
+    // Route: /users & /users/{userId} (Admin/Staff User Management)
+    // -------------------------------------------------------------
+    if (resource === "/users" || resource === "/users/{userId}") {
+      const groups = authorizer?.claims?.["cognito:groups"] || "";
+      const isStaff = groups.includes("Admin") || groups.includes("Staff");
+      if (!isStaff) {
+        return jsonResponse(403, { message: "Forbidden: Bạn không có quyền truy cập" });
+      }
+
+      if (resource === "/users" && method === "GET") {
+        const items: any[] = [];
+        let ExclusiveStartKey: Record<string, unknown> | undefined;
+
+        do {
+          const result = await dynamoDb.send(
+            new ScanCommand({
+              TableName: tableName,
+              FilterExpression: "SK = :profileSk",
+              ExpressionAttributeValues: {
+                ":profileSk": "PROFILE",
+              },
+              ExclusiveStartKey,
+            })
+          );
+
+          items.push(...(result.Items ?? []));
+          ExclusiveStartKey = result.LastEvaluatedKey;
+        } while (ExclusiveStartKey);
+
+        const profiles = items.map((item) => stripTableKeys(item));
+        return jsonResponse(200, profiles);
+      }
+
+      if (resource === "/users/{userId}") {
+        const targetUserId = event.pathParameters?.userId;
+        if (!targetUserId) {
+          return jsonResponse(400, { message: "Missing userId in path" });
+        }
+
+        if (method === "PUT") {
+          if (!event.body) {
+            return jsonResponse(400, { message: "Missing body" });
+          }
+
+          const body = JSON.parse(event.body);
+          const now = new Date().toISOString();
+
+          const getRes = await dynamoDb.send(
+            new GetCommand({
+              TableName: tableName,
+              Key: {
+                PK: `USER#${targetUserId}`,
+                SK: "PROFILE",
+              },
+            })
+          );
+
+          const existing = getRes.Item || {};
+          const updatedProfile = {
+            ...existing,
+            PK: `USER#${targetUserId}`,
+            SK: "PROFILE",
+            userId: targetUserId,
+            email: body.email || existing.email || "",
+            name: body.name || existing.name || "",
+            phone: body.phone || existing.phone || "",
+            address: body.address || existing.address || "",
+            role: body.role || existing.role || "User",
+            updatedAt: now,
+          };
+
+          await dynamoDb.send(
+            new PutCommand({
+              TableName: tableName,
+              Item: updatedProfile,
+            })
+          );
+
+          return jsonResponse(200, stripTableKeys(updatedProfile));
+        }
+
+        if (method === "DELETE") {
+          await dynamoDb.send(
+            new DeleteCommand({
+              TableName: tableName,
+              Key: {
+                PK: `USER#${targetUserId}`,
+                SK: "PROFILE",
+              },
+            })
+          );
+
+          return jsonResponse(200, { message: "User profile deleted successfully" });
+        }
+      }
+    }
+
+    // -------------------------------------------------------------
     // Route: /users/wishlist
     // -------------------------------------------------------------
     if (resource === "/users/wishlist") {

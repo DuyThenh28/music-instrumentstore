@@ -240,7 +240,11 @@ export default function Cart() {
         note: "",
       });
 
-      router.push("/orders");
+      if (paymentMethod === "VNPay" || paymentMethod === "Momo" || paymentMethod === "Stripe") {
+        router.push(`/checkout?orderId=${newOrder.id}&method=${paymentMethod}&amount=${totalPrice}`);
+      } else {
+        router.push("/orders");
+      }
     } catch (error) {
       console.error("Failed to create order", error);
       alert("Không thể tạo đơn hàng. Vui lòng thử lại.");

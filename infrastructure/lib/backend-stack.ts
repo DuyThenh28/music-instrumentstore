@@ -302,6 +302,33 @@ export class BackendStack extends cdk.Stack {
 
     // Route: /users
     const usersResource = api.root.addResource("users");
+    usersResource.addMethod(
+      "GET",
+      new apigateway.LambdaIntegration(productApiLambda),
+      authorizer ? {
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      } : undefined
+    );
+
+    // Route: /users/{userId}
+    const userResource = usersResource.addResource("{userId}");
+    userResource.addMethod(
+      "PUT",
+      new apigateway.LambdaIntegration(productApiLambda),
+      authorizer ? {
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      } : undefined
+    );
+    userResource.addMethod(
+      "DELETE",
+      new apigateway.LambdaIntegration(productApiLambda),
+      authorizer ? {
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      } : undefined
+    );
 
     // Route: /users/profile
     const profileResource = usersResource.addResource("profile");
@@ -315,6 +342,17 @@ export class BackendStack extends cdk.Stack {
     );
     profileResource.addMethod(
       "PUT",
+      new apigateway.LambdaIntegration(productApiLambda),
+      authorizer ? {
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      } : undefined
+    );
+
+    // Route: /users/orders
+    const userOrdersResource = usersResource.addResource("orders");
+    userOrdersResource.addMethod(
+      "GET",
       new apigateway.LambdaIntegration(productApiLambda),
       authorizer ? {
         authorizer,

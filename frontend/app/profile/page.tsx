@@ -4,8 +4,10 @@ import "../components/AmplifyConfig";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { fetchAuthSession, getCurrentUser } from "aws-amplify/auth";
+import { fetchAuthSession, getCurrentUser, updatePassword } from "aws-amplify/auth";
 import AddressSelector from "../components/AddressSelector";
+import { OrderCard } from "../components/OrderCard";
+import type { Order } from "../../types/cart";
 
 type UserProfile = {
   userId: string;
@@ -35,7 +37,25 @@ export default function ProfilePage() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
-  const [activeTab, setActiveTab] = useState<"profile" | "wishlist">("profile");
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [activeTab, setActiveTab] = useState<"profile" | "wishlist" | "orders" | "settings">("profile");
+
+  // Settings Tab States
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  const [notificationPrefs, setNotificationPrefs] = useState({
+    emailOrder: true,
+    smsShipping: false,
+    emailPromo: true,
+  });
+
+  const [preferences, setPreferences] = useState({
+    language: "vi",
+    theme: "light",
+  });
 
   // Form State
   const [formData, setFormData] = useState({
@@ -78,6 +98,39 @@ export default function ProfilePage() {
       if (wishlistRes.ok) {
         const wishlistData = await wishlistRes.json();
         setWishlist(wishlistData);
+      }
+
+      // Fetch Orders
+      const ordersRes = await fetch("/api/users/orders", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (ordersRes.ok) {
+        const ordersData = await ordersRes.json();
+        const mappedOrders = ordersData.map((order: any) => ({
+          id: order.id,
+          customer: order.customer,
+          paymentMethod: order.paymentMethod,
+          products: (order.items || []).map((item: any) => ({
+            id: Number(item.productId) || 0,
+            name: item.name,
+            price: `${(item.price || 0).toLocaleString("vi-VN")}đ`,
+            image: item.imageUrl || "/placeholder.png",
+            quantity: item.quantity
+          })),
+          totalItems: order.totalItems,
+          totalPrice: order.totalPrice,
+          status: order.status === "PENDING" ? "Chờ xác nhận" : (order.status ?? "Chờ xác nhận"),
+          createdAt: order.createdAt ? new Date(order.createdAt).toLocaleString("vi-VN") : ""
+        }));
+        mappedOrders.sort((a: any, b: any) => b.id.localeCompare(a.id));
+        setOrders(mappedOrders);
+      } else {
+        const local = localStorage.getItem("orders");
+        if (local) {
+          setOrders(JSON.parse(local) as Order[]);
+        }
       }
     } catch (err) {
       console.error("Failed to load user profile & wishlist data:", err);
@@ -129,6 +182,33 @@ export default function ProfilePage() {
       alert("Đã xảy ra lỗi khi lưu thông tin.");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      alert("Mật khẩu mới và mật khẩu xác nhận không khớp!");
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      alert("Mật khẩu mới phải chứa ít nhất 8 ký tự!");
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      await updatePassword({ oldPassword, newPassword });
+      alert("Đổi mật khẩu thành công!");
+      setOldPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err: any) {
+      console.error("Change password error:", err);
+      alert(err.message || "Đã xảy ra lỗi khi đổi mật khẩu.");
+    } finally {
+      setIsChangingPassword(false);
     }
   };
 
@@ -227,6 +307,26 @@ export default function ProfilePage() {
               >
                 ❤️ Sản phẩm yêu thích
               </button>
+              <button
+                onClick={() => setActiveTab("orders")}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm transition-all text-left ${
+                  activeTab === "orders"
+                    ? "bg-emerald-900 text-white shadow-sm"
+                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                }`}
+              >
+                📦 Đơn hàng đã mua
+              </button>
+              <button
+                onClick={() => setActiveTab("settings")}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm transition-all text-left ${
+                  activeTab === "settings"
+                    ? "bg-emerald-900 text-white shadow-sm"
+                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                }`}
+              >
+                ⚙️ Cài đặt tài khoản
+              </button>
             </nav>
           </aside>
 
@@ -306,7 +406,7 @@ export default function ProfilePage() {
                   </button>
                 </form>
               </div>
-            ) : (
+            ) : activeTab === "wishlist" ? (
               <div>
                 <h2 className="text-xl font-bold text-slate-800 mb-6 pb-2 border-b border-slate-100">
                   Sản Phẩm Yêu Thích Của Bạn
@@ -364,6 +464,170 @@ export default function ProfilePage() {
                     ))}
                   </div>
                 )}
+              </div>
+            ) : activeTab === "orders" ? (
+              <div>
+                <h2 className="text-xl font-bold text-slate-800 mb-6 pb-2 border-b border-slate-100">
+                  Đơn Hàng Đã Mua
+                </h2>
+
+                {orders.length === 0 ? (
+                  <div className="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                    <span className="text-4xl block mb-3">📦</span>
+                    <p className="text-sm text-slate-500 mb-4">Bạn chưa có đơn hàng nào.</p>
+                    <Link href="/products">
+                      <button className="bg-emerald-950 hover:bg-emerald-900 text-white text-xs font-bold px-4 py-2.5 rounded-lg">
+                        Khám phá sản phẩm ngay
+                      </button>
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
+                    {orders.map((order) => (
+                      <OrderCard key={order.id} order={order} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div>
+                <h2 className="text-xl font-bold text-slate-800 mb-6 pb-2 border-b border-slate-100">
+                  Cài Đặt Tài Khoản
+                </h2>
+
+                {/* Section 1: Change Password */}
+                <div className="mb-8">
+                  <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <span>🔑</span> Đổi mật khẩu
+                  </h3>
+                  <form onSubmit={handleChangePassword} className="space-y-4 max-w-md bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-2">Mật khẩu hiện tại</label>
+                      <input
+                        type="password"
+                        required
+                        value={oldPassword}
+                        onChange={(e) => setOldPassword(e.target.value)}
+                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-900 focus:border-emerald-900 transition-all bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-2">Mật khẩu mới</label>
+                      <input
+                        type="password"
+                        required
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-900 focus:border-emerald-900 transition-all bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-2">Xác nhận mật khẩu mới</label>
+                      <input
+                        type="password"
+                        required
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-900 focus:border-emerald-900 transition-all bg-white"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={isChangingPassword}
+                      className="bg-emerald-900 hover:bg-emerald-950 text-white font-semibold px-6 py-2.5 rounded-xl transition-all text-xs active:scale-[0.98] disabled:opacity-60"
+                    >
+                      {isChangingPassword ? "Đang cập nhật..." : "Cập Nhật Mật Khẩu"}
+                    </button>
+                  </form>
+                </div>
+
+                {/* Section 2: Notifications */}
+                <div className="mb-8 border-t border-slate-100 pt-6">
+                  <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <span>🔔</span> Cấu hình nhận thông báo
+                  </h3>
+                  <div className="space-y-4 max-w-xl">
+                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-800">Thông báo đơn hàng</h4>
+                        <p className="text-xs text-slate-500">Nhận thông báo qua email khi trạng thái đơn hàng thay đổi</p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={notificationPrefs.emailOrder}
+                          onChange={(e) => setNotificationPrefs({ ...notificationPrefs, emailOrder: e.target.checked })}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-900"></div>
+                      </label>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-800">Cập nhật giao hàng qua SMS</h4>
+                        <p className="text-xs text-slate-500">Nhận tin nhắn SMS trực tiếp về hành trình vận chuyển đơn hàng</p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={notificationPrefs.smsShipping}
+                          onChange={(e) => setNotificationPrefs({ ...notificationPrefs, smsShipping: e.target.checked })}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-900"></div>
+                      </label>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-800">Email khuyến mãi & sự kiện</h4>
+                        <p className="text-xs text-slate-500">Cập nhật các chương trình ưu đãi, giảm giá và nhạc cụ mới</p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={notificationPrefs.emailPromo}
+                          onChange={(e) => setNotificationPrefs({ ...notificationPrefs, emailPromo: e.target.checked })}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-900"></div>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 3: Interface & Language */}
+                <div className="border-t border-slate-100 pt-6">
+                  <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <span>⚙️</span> Tùy chọn hiển thị
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-xl">
+                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                      <label className="block text-xs font-bold text-slate-500 mb-2">Ngôn ngữ giao diện</label>
+                      <select
+                        value={preferences.language}
+                        onChange={(e) => setPreferences({ ...preferences, language: e.target.value })}
+                        className="w-full px-4 py-2 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none bg-white"
+                      >
+                        <option value="vi">Tiếng Việt (Default)</option>
+                        <option value="en">English</option>
+                      </select>
+                    </div>
+
+                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                      <label className="block text-xs font-bold text-slate-500 mb-2">Giao diện (Theme)</label>
+                      <select
+                        value={preferences.theme}
+                        onChange={(e) => setPreferences({ ...preferences, theme: e.target.value })}
+                        className="w-full px-4 py-2 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none bg-white"
+                      >
+                        <option value="light">Chế độ sáng</option>
+                        <option value="dark">Chế độ tối (Bản thử nghiệm)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </section>

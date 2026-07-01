@@ -5,9 +5,9 @@ import "../components/AmplifyConfig";
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
-import { signIn } from "aws-amplify/auth";
+import { signIn, fetchAuthSession } from "aws-amplify/auth";
 import { useRouter } from "next/navigation";
-
+ 
 // Fallback configuration if not initialized in the module scope
 if (!Amplify.getConfig().Auth?.Cognito) {
   console.log("Amplify Config not found in login page module scope. Applying fallback configuration.");
@@ -20,34 +20,46 @@ if (!Amplify.getConfig().Auth?.Cognito) {
     },
   });
 }
-
+ 
 export default function Login() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-
+ 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-
+ 
     if (!email || !password) {
       alert("Vui lòng nhập email và mật khẩu!");
       return;
     }
-
+ 
     setIsSubmitting(true);
     try {
-
+ 
       await signIn({
         username: email,
         password: password,
       });
-
+ 
+      let isAdminOrStaff = false;
+      try {
+        const session = await fetchAuthSession();
+        const groups = session.tokens?.idToken?.payload["cognito:groups"] as string[] | undefined;
+        isAdminOrStaff = !!(groups && (groups.includes("Admin") || groups.includes("Staff")));
+      } catch (sessionError) {
+        console.warn("Could not fetch session in login redirect:", sessionError);
+      }
+ 
       alert("Đăng nhập thành công!");
-      // Redirect to home page and refresh to update AuthNav state
       router.refresh();
-      window.location.href = "/";
+      if (isAdminOrStaff) {
+        window.location.href = "/admin";
+      } else {
+        window.location.href = "/";
+      }
     } catch (err) {
       const error = err as Error;
       console.error("Login error:", error);
