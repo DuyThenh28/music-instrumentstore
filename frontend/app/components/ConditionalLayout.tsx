@@ -16,9 +16,9 @@ export default function ConditionalLayout({
   chatWidget,
 }: ConditionalLayoutProps) {
   const pathname = usePathname();
-  const isAuthPage = pathname === "/login" || pathname === "/register";
+  const isMinimalLayout = pathname === "/login" || pathname === "/register" || pathname.startsWith("/admin");
 
-  if (isAuthPage) {
+  if (isMinimalLayout) {
     return <>{children}</>;
   }
 

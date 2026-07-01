@@ -100,6 +100,17 @@ export function CheckoutModal({
             />
             <span>🔵 VNPay / Ngân hàng</span>
           </label>
+
+          <label className="payment-option">
+            <input
+              type="radio"
+              name="payment"
+              checked={paymentMethod === "Stripe"}
+              onChange={() => onChangePaymentMethod("Stripe")}
+              disabled={isSubmitting}
+            />
+            <span>💳 Thẻ tín dụng quốc tế (Stripe)</span>
+          </label>
         </div>
 
         <div className="checkout-total-box">

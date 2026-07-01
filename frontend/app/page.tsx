@@ -1,30 +1,32 @@
 import Image from "next/image";
 import Link from "next/link";
-
+ 
 import { ProductCard } from "./components/ProductCard";
 import { getProducts } from "../lib/products";
-
+import HomeRedirect from "./components/HomeRedirect";
+ 
 export default async function Home() {
   const { products, error } = await getProducts();
   const heroProduct = products[0];
-
+ 
   // Get unique categories
   const categories = Array.from(
     new Set(products.map((p) => p.type).filter(Boolean))
   ) as string[];
-
+ 
   // Featured brands
   const brands = ["Yamaha", "Selmer", "Conn", "Yanagisawa", "Jupiter"];
-
+ 
   // Slice first 4 products for featured section
   const featuredProducts = products.slice(0, 4);
-
+ 
   // S3 base URL for brand logos
   const bucketName = process.env.S3_BUCKET_NAME || "cdk-hnb659fds-assets-112613858653-ap-southeast-1";
   const s3BaseUrl = `https://${bucketName}.s3.ap-southeast-1.amazonaws.com`;
-
+ 
   return (
     <main className="home-page">
+      <HomeRedirect />
       {/* HERO */}
       <section className="premium-hero">
         <div className="premium-content">

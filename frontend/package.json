@@ -13,6 +13,8 @@
     "@aws-sdk/client-lambda": "^3.1075.0",
     "@aws-sdk/client-lex-runtime-v2": "^3.1075.0",
     "@music-store/shared-types": "0.1.0",
+    "@stripe/react-stripe-js": "^6.6.0",
+    "@stripe/stripe-js": "^9.8.0",
     "@swc/helpers": "^0.5.23",
     "aws-amplify": "^6.18.0",
     "next": "^16.2.9",

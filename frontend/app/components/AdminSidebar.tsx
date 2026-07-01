@@ -3,8 +3,8 @@
 import Link from "next/link";
 
 interface AdminSidebarProps {
-  activeTab: "products" | "orders";
-  onTabChange: (tab: "products" | "orders") => void;
+  activeTab: "products" | "orders" | "users";
+  onTabChange: (tab: "products" | "orders" | "users") => void;
 }
 
 export function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
@@ -28,6 +28,13 @@ export function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
           onClick={() => onTabChange("orders")}
         >
           📦 Quản Lý Đơn Hàng
+        </button>
+        <button
+          type="button"
+          className={activeTab === "users" ? "active" : ""}
+          onClick={() => onTabChange("users")}
+        >
+          👥 Quản Lý Nhân Sự
         </button>
         <div className="sidebar-divider"></div>
         <Link href="/" className="back-to-shop">

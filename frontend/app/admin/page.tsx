@@ -5,16 +5,32 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { fetchAuthSession } from "aws-amplify/auth";
 import type { Product } from "../../types/product";
+import type { Order } from "../../types/cart";
 import { AdminSidebar } from "../components/AdminSidebar";
 import { ProductTable } from "../components/ProductTable";
 import { ProductModal } from "../components/ProductModal";
+import { OrderTable } from "../components/OrderTable";
+import { OrderDetailsModal } from "../components/OrderDetailsModal";
 
 export default function AdminPage() {
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [activeTab, setActiveTab] = useState<"products" | "orders">("products");
+  const [activeTab, setActiveTab] = useState<"products" | "orders" | "users">("products");
+
+  // User/Personnel management state
+  const [usersList, setUsersList] = useState<any[]>([]);
+  const [userSearch, setUserSearch] = useState("");
+  const [selectedUser, setSelectedUser] = useState<any | null>(null);
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [isEditUserSubmitting, setIsEditUserSubmitting] = useState(false);
+  const [userFormData, setUserFormData] = useState({
+    name: "",
+    phone: "",
+    address: "",
+    role: "User",
+  });
 
   // Form / Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -32,6 +48,13 @@ export default function AdminPage() {
     description: "",
   });
 
+  // Order management state
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [orderSearch, setOrderSearch] = useState("");
+  const [orderStatusFilter, setOrderStatusFilter] = useState("Tất cả");
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+
   const fetchProducts = async () => {
     try {
       const res = await fetch("/api/products");
@@ -45,14 +68,172 @@ export default function AdminPage() {
     }
   };
 
+  const fetchOrders = () => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("orders");
+      if (stored) {
+        setOrders(JSON.parse(stored) as Order[]);
+      } else {
+        // Seed some mock orders if empty so there is something to show
+        const mock: Order[] = [
+          {
+            id: "ord_1719842513_a8b9c0d1",
+            customer: {
+              name: "Trần Văn A",
+              phone: "0912345678",
+              address: "123 Đường Lê Lợi, Quận 1, TP. Hồ Chí Minh",
+              note: "Giao giờ hành chính, gọi trước khi giao"
+            },
+            paymentMethod: "Thẻ tín dụng (Stripe)",
+            products: [
+              {
+                id: 1,
+                name: "Yamaha YAS-280 Alto Saxophone",
+                price: "24,500,000",
+                image: "https://lh3.googleusercontent.com/aida-public/AB6AXuBHQJCKH0A3aaCbpuo9oQkVLzDfAc1q5qj7kkSGopzv8h87voG54uF4HV1dKsKfXK8uLNIua4hwoY-dxT-fyyZSR6qFgNCHRjBH8ri91RsveE20KDrwJuRF9g54svJLu84rbImLYWjLjCy20mVNmLYbnRzgX9TAZ45obSqrIrvlS1sSncNxWH7tiQeoC_TVxRw-NtwTzJzM9pAk3tsqxpYT2a3TSkHeUPbSUHzlCPpBr32JiQBJWm0",
+                quantity: 1
+              }
+            ],
+            totalItems: 1,
+            totalPrice: 24500000,
+            status: "Chờ xác nhận",
+            createdAt: "2026-07-01T15:30:00.000Z"
+          },
+          {
+            id: "ord_1719831200_f2e3d4c5",
+            customer: {
+              name: "Nguyễn Thị B",
+              phone: "0987654321",
+              address: "456 Đường Nguyễn Huệ, Quận 3, TP. Hồ Chí Minh",
+              note: "Vui lòng bọc kỹ hộp chống sốc"
+            },
+            paymentMethod: "Thanh toán khi nhận hàng (COD)",
+            products: [
+              {
+                id: 2,
+                name: "Selmer Paris Axos Alto Saxophone",
+                price: "72,000,000",
+                image: "https://lh3.googleusercontent.com/aida-public/AB6AXuBHQJCKH0A3aaCbpuo9oQkVLzDfAc1q5qj7kkSGopzv8h87voG54uF4HV1dKsKfXK8uLNIua4hwoY-dxT-fyyZSR6qFgNCHRjBH8ri91RsveE20KDrwJuRF9g54svJLu84rbImLYWjLjCy20mVNmLYbnRzgX9TAZ45obSqrIrvlS1sSncNxWH7tiQeoC_TVxRw-NtwTzJzM9pAk3tsqxpYT2a3TSkHeUPbSUHzlCPpBr32JiQBJWm0",
+                quantity: 1
+              }
+            ],
+            totalItems: 1,
+            totalPrice: 72000000,
+            status: "Chờ lấy đơn",
+            createdAt: "2026-07-01T10:15:00.000Z"
+          }
+        ];
+        localStorage.setItem("orders", JSON.stringify(mock));
+        setOrders(mock);
+      }
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const session = await fetchAuthSession();
+      const token = session.tokens?.idToken?.toString();
+      if (!token) return;
+
+      const res = await fetch("/api/admin/users", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUsersList(data);
+      }
+    } catch (error) {
+      console.error("Error fetching users list:", error);
+    }
+  };
+
+  const handleOpenEditUserModal = (user: any) => {
+    setSelectedUser(user);
+    setUserFormData({
+      name: user.name || "",
+      phone: user.phone || "",
+      address: user.address || "",
+      role: user.role || "User",
+    });
+    setIsUserModalOpen(true);
+  };
+
+  const handleEditUserSubmit = async () => {
+    if (!selectedUser) return;
+    setIsEditUserSubmitting(true);
+    try {
+      const session = await fetchAuthSession();
+      const token = session.tokens?.idToken?.toString();
+      if (!token) return;
+
+      const res = await fetch(`/api/admin/users/${selectedUser.userId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(userFormData),
+      });
+
+      if (res.ok) {
+        alert("Cập nhật vai trò người dùng thành công!");
+        setIsUserModalOpen(false);
+        fetchUsers();
+      } else {
+        alert("Cập nhật thất bại. Vui lòng thử lại.");
+      }
+    } catch (err) {
+      console.error("Failed to update user profile:", err);
+      alert("Đã xảy ra lỗi khi cập nhật.");
+    } finally {
+      setIsEditUserSubmitting(false);
+    }
+  };
+
+  const handleDeleteUserProfile = async (userId: string) => {
+    if (!confirm("Bạn có chắc chắn muốn xóa hồ sơ người dùng này? Thao tác này không thể hoàn tác.")) return;
+
+    try {
+      const session = await fetchAuthSession();
+      const token = session.tokens?.idToken?.toString();
+      if (!token) return;
+
+      const res = await fetch(`/api/admin/users/${userId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (res.ok) {
+        alert("Xóa hồ sơ người dùng thành công!");
+        fetchUsers();
+      } else {
+        alert("Không thể xóa hồ sơ người dùng.");
+      }
+    } catch (err) {
+      console.error("Failed to delete user profile:", err);
+      alert("Đã xảy ra lỗi khi xóa.");
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "users" && isAuthorized) {
+      fetchUsers();
+    }
+  }, [activeTab, isAuthorized]);
+
   useEffect(() => {
     const init = async () => {
       try {
         const session = await fetchAuthSession();
         const groups = session.tokens?.idToken?.payload["cognito:groups"] as string[] | undefined;
-        if (groups && groups.includes("Admin")) {
+        if (groups && (groups.includes("Admin") || groups.includes("Staff"))) {
           setIsAuthorized(true);
           await fetchProducts();
+          fetchOrders();
         } else {
           setIsAuthorized(false);
         }
@@ -163,10 +344,45 @@ export default function AdminPage() {
     }));
   };
 
+  const handleUpdateOrderStatus = (orderId: string, newStatus: string) => {
+    const updatedOrders = orders.map((o) => {
+      if (o.id === orderId) {
+        return { ...o, status: newStatus };
+      }
+      return o;
+    });
+    setOrders(updatedOrders);
+    localStorage.setItem("orders", JSON.stringify(updatedOrders));
+    alert(`Đã cập nhật trạng thái đơn hàng sang: ${newStatus}`);
+  };
+
+  const handleDeleteOrder = (orderId: string) => {
+    if (!confirm("Bạn có chắc chắn muốn xóa đơn hàng này?")) return;
+    const updatedOrders = orders.filter((o) => o.id !== orderId);
+    setOrders(updatedOrders);
+    localStorage.setItem("orders", JSON.stringify(updatedOrders));
+    alert("Đã xóa đơn hàng thành công!");
+  };
+
+  const handleViewOrderDetails = (order: Order) => {
+    setSelectedOrder(order);
+    setIsOrderModalOpen(true);
+  };
+
   const filteredProducts = products.filter((product) =>
     product.name.toLowerCase().includes(search.toLowerCase()) ||
     product.brand.toLowerCase().includes(search.toLowerCase())
   );
+
+  const filteredUsers = usersList.filter((user) => {
+    const term = userSearch.toLowerCase();
+    return (
+      (user.name || "").toLowerCase().includes(term) ||
+      (user.email || "").toLowerCase().includes(term) ||
+      (user.phone || "").toLowerCase().includes(term) ||
+      (user.role || "").toLowerCase().includes(term)
+    );
+  });
 
   if (isAuthorized === null) {
     return (
@@ -226,13 +442,94 @@ export default function AdminPage() {
                 onDeleteProduct={handleDeleteProduct}
               />
             </div>
-          ) : (
+          ) : activeTab === "orders" ? (
             <div className="admin-section">
               <div className="section-header">
                 <h2>Quản Lý Đơn Đặt Hàng</h2>
               </div>
-              <div className="admin-empty">
-                Chức năng quản lý hóa đơn & khách hàng đang được xử lý thông qua hệ thống EventBridge và SQS ở Backend.
+              <OrderTable
+                orders={orders}
+                search={orderSearch}
+                onSearchChange={setOrderSearch}
+                statusFilter={orderStatusFilter}
+                onStatusFilterChange={setOrderStatusFilter}
+                onUpdateStatus={handleUpdateOrderStatus}
+                onViewDetails={handleViewOrderDetails}
+                onDeleteOrder={handleDeleteOrder}
+              />
+            </div>
+          ) : (
+            <div className="admin-section">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold text-slate-800">Quản Lý Người Dùng & Nhân Sự</h2>
+                <div className="flex gap-4">
+                  <input
+                    type="text"
+                    placeholder="Tìm kiếm người dùng..."
+                    value={userSearch}
+                    onChange={(e) => setUserSearch(e.target.value)}
+                    className="px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-emerald-900 bg-white"
+                  />
+                </div>
+              </div>
+
+              {/* Table */}
+              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                <table className="w-full text-left text-sm border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px] tracking-wider">
+                      <th className="p-4">Họ và Tên</th>
+                      <th className="p-4">Email</th>
+                      <th className="p-4">Số điện thoại</th>
+                      <th className="p-4">Địa chỉ</th>
+                      <th className="p-4">Vai trò</th>
+                      <th className="p-4 text-right">Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-slate-700">
+                    {filteredUsers.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="text-center p-8 text-slate-400">
+                          Không tìm thấy người dùng nào.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredUsers.map((user) => (
+                        <tr key={user.userId} className="hover:bg-slate-50/50 transition-all">
+                          <td className="p-4 font-semibold text-slate-800">{user.name || "Chưa cập nhật"}</td>
+                          <td className="p-4">{user.email}</td>
+                          <td className="p-4">{user.phone || "Chưa cập nhật"}</td>
+                          <td className="p-4 max-w-[200px] truncate">{user.address || "Chưa cập nhật"}</td>
+                          <td className="p-4">
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                              user.role === "Admin" ? "bg-rose-50 text-rose-600 border border-rose-100" :
+                              user.role === "Staff" ? "bg-amber-50 text-amber-600 border border-amber-100" :
+                              "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                            }`}>
+                              {user.role === "Admin" ? "Quản trị viên" :
+                               user.role === "Staff" ? "Nhân viên" :
+                               "Khách hàng"}
+                            </span>
+                          </td>
+                          <td className="p-4 text-right flex justify-end gap-2">
+                            <button
+                              onClick={() => handleOpenEditUserModal(user)}
+                              className="text-xs font-bold text-emerald-800 hover:underline px-3 py-1.5 hover:bg-emerald-50 rounded-lg transition-all"
+                            >
+                              Sửa vai trò
+                            </button>
+                            <button
+                              onClick={() => handleDeleteUserProfile(user.userId)}
+                              className="text-xs font-bold text-rose-600 hover:underline px-3 py-1.5 hover:bg-rose-50 rounded-lg transition-all"
+                            >
+                              Xóa
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
@@ -248,6 +545,60 @@ export default function AdminPage() {
         onSubmit={handleSubmit}
         onClose={() => setIsModalOpen(false)}
       />
+
+      <OrderDetailsModal
+        isOpen={isOrderModalOpen}
+        order={selectedOrder}
+        onClose={() => setIsOrderModalOpen(false)}
+      />
+
+      {isUserModalOpen && selectedUser && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-3xl p-6 shadow-xl border border-slate-100">
+            <h3 className="text-lg font-bold text-slate-800 mb-4 text-center">Cập Nhật Vai Trò Người Dùng</h3>
+            
+            <div className="space-y-4 mb-6">
+              <div>
+                <span className="text-xs font-bold text-slate-400 block mb-1">Họ và Tên</span>
+                <span className="text-sm font-semibold text-slate-800">{selectedUser.name || "Chưa cập nhật"}</span>
+              </div>
+              <div>
+                <span className="text-xs font-bold text-slate-400 block mb-1">Email</span>
+                <span className="text-sm font-semibold text-slate-800">{selectedUser.email}</span>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-2">Vai trò người dùng</label>
+                <select
+                  value={userFormData.role}
+                  onChange={(e) => setUserFormData({ ...userFormData, role: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-900 bg-white"
+                >
+                  <option value="User">Khách hàng (User)</option>
+                  <option value="Staff">Nhân viên (Staff)</option>
+                  <option value="Admin">Quản trị viên (Admin)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <button
+                onClick={handleEditUserSubmit}
+                disabled={isEditUserSubmitting}
+                className="flex-1 bg-emerald-900 hover:bg-emerald-950 text-white font-semibold py-2.5 rounded-xl text-sm transition-all active:scale-[0.98] disabled:opacity-50"
+              >
+                {isEditUserSubmitting ? "Đang lưu..." : "Lưu thay đổi"}
+              </button>
+              <button
+                onClick={() => setIsUserModalOpen(false)}
+                disabled={isEditUserSubmitting}
+                className="bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-2.5 px-6 rounded-xl text-sm transition-all"
+              >
+                Hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
