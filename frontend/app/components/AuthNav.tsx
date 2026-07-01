@@ -2,8 +2,8 @@
 
 import "./AmplifyConfig";
 import { useEffect, useState } from "react";
-import { getCurrentUser, signOut, fetchUserAttributes } from "@aws-amplify/auth";
-import { Hub } from "@aws-amplify/core";
+import { getCurrentUser, signOut, fetchUserAttributes } from "aws-amplify/auth";
+import { Hub } from "aws-amplify/utils";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 

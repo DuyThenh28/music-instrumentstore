@@ -3,7 +3,7 @@
 import "../components/AmplifyConfig";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { fetchAuthSession } from "@aws-amplify/auth";
+import { fetchAuthSession } from "aws-amplify/auth";
 import type { Product } from "../../types/product";
 import { AdminSidebar } from "../components/AdminSidebar";
 import { ProductTable } from "../components/ProductTable";

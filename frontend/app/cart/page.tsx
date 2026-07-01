@@ -4,7 +4,7 @@ import "../components/AmplifyConfig";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { getCurrentUser, fetchUserAttributes } from "@aws-amplify/auth";
+import { getCurrentUser, fetchUserAttributes } from "aws-amplify/auth";
 
 import type { CartItem, Customer, Order } from "../../types/cart";
 import { CartItemCard } from "../components/CartItemCard";

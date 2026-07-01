@@ -4,7 +4,7 @@ import "../../components/AmplifyConfig";
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { fetchAuthSession, getCurrentUser } from "@aws-amplify/auth";
+import { fetchAuthSession, getCurrentUser } from "aws-amplify/auth";
 import { useRouter } from "next/navigation";
 
 import { useCart } from "../../context/CartContext";

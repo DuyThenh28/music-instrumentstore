@@ -1,11 +1,11 @@
 "use client";
 
-import { Amplify } from "@aws-amplify/core";
+import { Amplify } from "aws-amplify";
 import "../components/AmplifyConfig";
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
-import { signIn } from "@aws-amplify/auth";
+import { signIn } from "aws-amplify/auth";
 import { useRouter } from "next/navigation";
 
 // Fallback configuration if not initialized in the module scope
