@@ -1,11 +1,25 @@
 "use client";
 
+import { Amplify } from "@aws-amplify/core";
 import "../components/AmplifyConfig";
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
 import { signIn } from "@aws-amplify/auth";
 import { useRouter } from "next/navigation";
+
+// Fallback configuration if not initialized in the module scope
+if (!Amplify.getConfig().Auth?.Cognito) {
+  console.log("Amplify Config not found in login page module scope. Applying fallback configuration.");
+  Amplify.configure({
+    Auth: {
+      Cognito: {
+        userPoolId: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID || "",
+        userPoolClientId: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID || "",
+      },
+    },
+  });
+}
 
 export default function Login() {
   const router = useRouter();
@@ -24,6 +38,11 @@ export default function Login() {
 
     setIsSubmitting(true);
     try {
+      console.log("handleLogin: Current Amplify configuration on submit:", {
+        config: Amplify.getConfig(),
+        envUserPoolId: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID,
+        envClientId: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID,
+      });
       await signIn({
         username: email,
         password: password,
