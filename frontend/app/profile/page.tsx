@@ -629,18 +629,6 @@ export default function ProfilePage() {
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-xl">
                     <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                      <label className="block text-xs font-bold text-slate-500 mb-2">Ngôn ngữ giao diện</label>
-                      <select
-                        value={preferences.language}
-                        onChange={(e) => setPreferences({ ...preferences, language: e.target.value })}
-                        className="w-full px-4 py-2 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none bg-white"
-                      >
-                        <option value="vi">Tiếng Việt (Default)</option>
-                        <option value="en">English</option>
-                      </select>
-                    </div>
-
-                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
                       <label className="block text-xs font-bold text-slate-500 mb-2">Giao diện (Theme)</label>
                       <select
                         value={preferences.theme}
