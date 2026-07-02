@@ -78,64 +78,23 @@ export default function AdminPage() {
     }
   };
 
-  const fetchOrders = () => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("orders");
-      if (stored) {
-        setOrders(JSON.parse(stored) as Order[]);
-      } else {
-        // Seed some mock orders if empty so there is something to show
-        const mock: Order[] = [
-          {
-            id: "ord_1719842513_a8b9c0d1",
-            customer: {
-              name: "Trần Văn A",
-              phone: "0912345678",
-              address: "123 Đường Lê Lợi, Quận 1, TP. Hồ Chí Minh",
-              note: "Giao giờ hành chính, gọi trước khi giao"
-            },
-            paymentMethod: "Thẻ tín dụng (Stripe)",
-            products: [
-              {
-                id: 1,
-                name: "Yamaha YAS-280 Alto Saxophone",
-                price: "24,500,000",
-                image: "https://lh3.googleusercontent.com/aida-public/AB6AXuBHQJCKH0A3aaCbpuo9oQkVLzDfAc1q5qj7kkSGopzv8h87voG54uF4HV1dKsKfXK8uLNIua4hwoY-dxT-fyyZSR6qFgNCHRjBH8ri91RsveE20KDrwJuRF9g54svJLu84rbImLYWjLjCy20mVNmLYbnRzgX9TAZ45obSqrIrvlS1sSncNxWH7tiQeoC_TVxRw-NtwTzJzM9pAk3tsqxpYT2a3TSkHeUPbSUHzlCPpBr32JiQBJWm0",
-                quantity: 1
-              }
-            ],
-            totalItems: 1,
-            totalPrice: 24500000,
-            status: "Chờ xác nhận",
-            createdAt: "2026-07-01T15:30:00.000Z"
-          },
-          {
-            id: "ord_1719831200_f2e3d4c5",
-            customer: {
-              name: "Nguyễn Thị B",
-              phone: "0987654321",
-              address: "456 Đường Nguyễn Huệ, Quận 3, TP. Hồ Chí Minh",
-              note: "Vui lòng bọc kỹ hộp chống sốc"
-            },
-            paymentMethod: "Thanh toán khi nhận hàng (COD)",
-            products: [
-              {
-                id: 2,
-                name: "Selmer Paris Axos Alto Saxophone",
-                price: "72,000,000",
-                image: "https://lh3.googleusercontent.com/aida-public/AB6AXuBHQJCKH0A3aaCbpuo9oQkVLzDfAc1q5qj7kkSGopzv8h87voG54uF4HV1dKsKfXK8uLNIua4hwoY-dxT-fyyZSR6qFgNCHRjBH8ri91RsveE20KDrwJuRF9g54svJLu84rbImLYWjLjCy20mVNmLYbnRzgX9TAZ45obSqrIrvlS1sSncNxWH7tiQeoC_TVxRw-NtwTzJzM9pAk3tsqxpYT2a3TSkHeUPbSUHzlCPpBr32JiQBJWm0",
-                quantity: 1
-              }
-            ],
-            totalItems: 1,
-            totalPrice: 72000000,
-            status: "Chờ lấy đơn",
-            createdAt: "2026-07-01T10:15:00.000Z"
-          }
-        ];
-        localStorage.setItem("orders", JSON.stringify(mock));
-        setOrders(mock);
+  const fetchOrders = async () => {
+    try {
+      const session = await fetchAuthSession();
+      const token = session.tokens?.idToken?.toString();
+      if (!token) return;
+
+      const res = await fetch("/api/admin/orders", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setOrders(data);
       }
+    } catch (error) {
+      console.error("Error fetching orders list:", error);
     }
   };
 
@@ -354,24 +313,35 @@ export default function AdminPage() {
     }));
   };
 
-  const handleUpdateOrderStatus = (orderId: string, newStatus: string) => {
-    const updatedOrders = orders.map((o) => {
-      if (o.id === orderId) {
-        return { ...o, status: newStatus };
+  const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
+    try {
+      const session = await fetchAuthSession();
+      const token = session.tokens?.idToken?.toString();
+      if (!token) return;
+
+      const res = await fetch(`/api/admin/orders/${orderId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (res.ok) {
+        alert(`Đã cập nhật trạng thái đơn hàng sang: ${newStatus}`);
+        fetchOrders();
+      } else {
+        alert("Cập nhật trạng thái thất bại. Vui lòng thử lại.");
       }
-      return o;
-    });
-    setOrders(updatedOrders);
-    localStorage.setItem("orders", JSON.stringify(updatedOrders));
-    alert(`Đã cập nhật trạng thái đơn hàng sang: ${newStatus}`);
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      alert("Lỗi khi kết nối với máy chủ.");
+    }
   };
 
   const handleDeleteOrder = (orderId: string) => {
-    if (!confirm("Bạn có chắc chắn muốn xóa đơn hàng này?")) return;
-    const updatedOrders = orders.filter((o) => o.id !== orderId);
-    setOrders(updatedOrders);
-    localStorage.setItem("orders", JSON.stringify(updatedOrders));
-    alert("Đã xóa đơn hàng thành công!");
+    alert(`Không hỗ trợ xóa đơn hàng thực tế (${orderId}). Vui lòng chuyển trạng thái đơn hàng sang 'Đã hủy'.`);
   };
 
   const handleViewOrderDetails = (order: Order) => {

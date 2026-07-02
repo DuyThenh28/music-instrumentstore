@@ -23,7 +23,7 @@ export function OrderTable({
   onViewDetails,
   onDeleteOrder,
 }: OrderTableProps) {
-  const statuses = ["Tất cả", "Chờ xác nhận", "Chờ lấy đơn", "Chờ giao hàng", "Đánh giá"];
+  const statuses = ["Tất cả", "Chờ xác nhận", "Chờ lấy đơn", "Chờ giao hàng", "Đánh giá", "Tạm dừng", "Đã hủy"];
 
   // Filter orders by search and status tab
   const filteredOrders = orders.filter((order) => {
@@ -47,6 +47,10 @@ export function OrderTable({
         return { bg: "#E0F2FE", text: "#0284C7" }; // Light Blue
       case "Đánh giá":
         return { bg: "#D1FAE5", text: "#059669" }; // Emerald
+      case "Tạm dừng":
+        return { bg: "#F3F4F6", text: "#9CA3AF" }; // Gray
+      case "Đã hủy":
+        return { bg: "#FEE2E2", text: "#EF4444" }; // Red
       default:
         return { bg: "#F3F4F6", text: "#4B5563" }; // Gray
     }
@@ -199,6 +203,8 @@ export function OrderTable({
                           <option value="Chờ lấy đơn">Chờ lấy đơn</option>
                           <option value="Chờ giao hàng">Chờ giao hàng</option>
                           <option value="Đánh giá">Đánh giá (Đã giao)</option>
+                          <option value="Tạm dừng">Tạm dừng</option>
+                          <option value="Đã hủy">Đã hủy</option>
                         </select>
 
                         <button
