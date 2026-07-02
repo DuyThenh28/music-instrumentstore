@@ -52,6 +52,8 @@
   --color-on-secondary-fixed-variant: #6e3900;
   --color-inverse-surface: #2d3133;
   --color-inverse-primary: #95d3ba;
+  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-serif), ui-serif, Georgia, serif;
 
   --radius-DEFAULT: 0.125rem;
   --radius-lg: 0.25rem;
@@ -2298,4 +2300,14 @@ button {
   .hero-stats strong {
     font-size: 22px;
   }
+}
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+* {
+  box-sizing: border-box;
 }

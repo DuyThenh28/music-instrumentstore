@@ -5,7 +5,7 @@ import "../components/AmplifyConfig";
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
-import { signIn, fetchAuthSession } from "aws-amplify/auth";
+import { signIn, fetchAuthSession, signInWithRedirect } from "aws-amplify/auth";
 import { useRouter } from "next/navigation";
 // Fallback configuration if not initialized in the module scope
 if (!Amplify.getConfig().Auth?.Cognito) {
@@ -26,6 +26,15 @@ export default function Login() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  const handleOAuth = async (provider: 'Google' | 'Facebook') => {
+    try {
+      await signInWithRedirect({ provider });
+    } catch (error: any) {
+      console.error(`OAuth error (${provider}):`, error);
+      alert(`Đăng nhập bằng ${provider} hiện chưa khả dụng (Chưa cấu hình OAuth trên hệ thống). Vui lòng sử dụng đăng nhập bằng email.`);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,7 +137,7 @@ export default function Login() {
         }
         .login-input {
           width: 100%;
-          padding: 14px 16px 14px 48px;
+          padding: 14px 16px;
           background: #fff;
           border: 1px solid #E5E7EB;
           border-radius: 12px;
@@ -308,9 +317,6 @@ export default function Login() {
               <div className="form-group">
                 <label className="form-label" htmlFor="email">Email</label>
                 <div className="input-wrapper">
-                  <svg className="input-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
                   <input
                     className="login-input"
                     id="email"
@@ -333,9 +339,6 @@ export default function Login() {
                   </a>
                 </div>
                 <div className="input-wrapper">
-                  <svg className="input-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
                   <input
                     className="login-input"
                     style={{ paddingRight: '48px', fontWeight: 500 }}
@@ -406,7 +409,7 @@ export default function Login() {
 
             {/* Social Options */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <button type="button" className="social-btn" disabled={isSubmitting}>
+              <button type="button" className="social-btn" disabled={isSubmitting} onClick={() => handleOAuth('Google')}>
                 <svg style={{ width: '18px', height: '18px' }} viewBox="0 0 24 24">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
                   <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
@@ -415,7 +418,7 @@ export default function Login() {
                 </svg>
                 <span>Google</span>
               </button>
-              <button type="button" className="social-btn" disabled={isSubmitting}>
+              <button type="button" className="social-btn" disabled={isSubmitting} onClick={() => handleOAuth('Facebook')}>
                 <svg style={{ width: '18px', height: '18px', color: '#1877F2' }} fill="currentColor" viewBox="0 0 24 24">
                   <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                 </svg>
