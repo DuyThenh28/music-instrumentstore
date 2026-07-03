@@ -212,50 +212,50 @@ export default async function Home() {
           font-size: 0.7rem;
           color: #888;
         }
-        .category-section-dark {
+        .home-page .category-section-dark {
           padding-top: 8rem !important; /* Make room for overlapping trust bar */
         }
         
         /* Overrides for other sections to match dark theme */
         .home-page h2 { color: #DF9E47 !important; }
-        .category-image-card, .brand-logo-card { 
+        .home-page .category-image-card, .home-page .brand-logo-card { 
           background: #0a1612 !important; 
           border: 1px solid rgba(255,255,255,0.05); 
           color: #fff; 
         }
-        .category-image-card:hover { border-color: #DF9E47; }
-        .category-image-card p { color: #fff !important; }
+        .home-page .category-image-card:hover { border-color: #DF9E47; }
+        .home-page .category-image-card p { color: #fff !important; }
         
-        .section-header { text-align: center; margin-bottom: 3rem; }
+        .home-page .section-header { text-align: center; margin-bottom: 3rem; }
         .home-page h2 { font-family: var(--font-serif), serif; font-size: 2.2rem; color: #DF9E47 !important; margin-bottom: 0.5rem; font-weight: 400; }
-        .section-separator { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 1rem; }
-        .sep-line { width: 40px; height: 1px; background-color: rgba(223, 158, 71, 0.5); }
-        .section-subtitle { color: #9CA3AF; font-size: 0.95rem; font-weight: 300; }
+        .home-page .section-separator { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 1rem; }
+        .home-page .sep-line { width: 40px; height: 1px; background-color: rgba(223, 158, 71, 0.5); }
+        .home-page .section-subtitle { color: #9CA3AF; font-size: 0.95rem; font-weight: 300; }
         
-        .brand-logo-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1.5rem; padding: 0 5%; }
-        .brand-card-luxury { background: linear-gradient(180deg, rgba(223,158,71,0.05) 0%, rgba(5,16,12,0.8) 100%); border: 1px solid rgba(223, 158, 71, 0.2); border-radius: 8px; padding: 2.5rem 1rem 1.5rem 1rem; display: flex; flex-direction: column; align-items: center; justify-content: space-between; text-decoration: none; transition: transform 0.3s, border-color 0.3s; height: 200px; position: relative; z-index: 1; }
-        .brand-card-luxury:hover { transform: translateY(-5px); border-color: rgba(223, 158, 71, 0.6); }
-        .brand-logo-wrapper { flex: 1; display: flex; align-items: center; justify-content: center; width: 100%; }
-        .brand-sep-dot { width: 4px; height: 4px; background-color: #DF9E47; border-radius: 50%; margin: 1rem 0 0.8rem 0; transform: rotate(45deg); }
-        .brand-slogan { color: #DF9E47; font-size: 0.55rem; letter-spacing: 1px; text-transform: uppercase; text-align: center; font-weight: 600; margin: 0; }
+        .home-page .brand-logo-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1.5rem; padding: 0 5%; }
+        .home-page .brand-card-luxury { background: linear-gradient(180deg, rgba(223,158,71,0.05) 0%, rgba(5,16,12,0.8) 100%); border: 1px solid rgba(223, 158, 71, 0.2); border-radius: 8px; padding: 2.5rem 1rem 1.5rem 1rem; display: flex; flex-direction: column; align-items: center; justify-content: space-between; text-decoration: none; transition: transform 0.3s, border-color 0.3s; height: 200px; position: relative; z-index: 1; }
+        .home-page .brand-card-luxury:hover { transform: translateY(-5px); border-color: rgba(223, 158, 71, 0.6); }
+        .home-page .brand-logo-wrapper { flex: 1; display: flex; align-items: center; justify-content: center; width: 100%; }
+        .home-page .brand-sep-dot { width: 4px; height: 4px; background-color: #DF9E47; border-radius: 50%; margin: 1rem 0 0.8rem 0; transform: rotate(45deg); }
+        .home-page .brand-slogan { color: #DF9E47; font-size: 0.55rem; letter-spacing: 1px; text-transform: uppercase; text-align: center; font-weight: 600; margin: 0; }
         
-        .category-section-dark { padding: 8rem 0 4rem 0 !important; position: relative; }
-        .brand-section, .featured-section { padding: 4rem 0; position: relative; }
-        .category-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 2rem; padding: 0 5%; }
+        .home-page .category-section-dark { padding: 8rem 0 4rem 0 !important; position: relative; }
+        .home-page .brand-section, .home-page .featured-section { padding: 4rem 0; position: relative; }
+        .home-page .category-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 2rem; padding: 0 5%; }
         
-        .btn-outline-gold { background-color: transparent; color: #DF9E47; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 8px; border: 1px solid rgba(223,158,71,0.4); cursor: pointer; transition: background 0.2s, color 0.2s; text-decoration: none; position: relative; z-index: 1; }
-        .btn-outline-gold:hover { background-color: rgba(223,158,71,0.1); border-color: #DF9E47; }
+        .home-page .btn-outline-gold { background-color: transparent; color: #DF9E47; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 8px; border: 1px solid rgba(223,158,71,0.4); cursor: pointer; transition: background 0.2s, color 0.2s; text-decoration: none; position: relative; z-index: 1; }
+        .home-page .btn-outline-gold:hover { background-color: rgba(223,158,71,0.1); border-color: #DF9E47; }
         
-        .section-bg-glow-left { position: absolute; left: -10%; top: 20%; width: 40%; height: 60%; background: radial-gradient(circle, rgba(223,158,71,0.08) 0%, rgba(5,16,12,0) 70%); z-index: 0; pointer-events: none; }
-        .section-bg-glow-right { position: absolute; right: -10%; bottom: 10%; width: 40%; height: 60%; background: radial-gradient(circle, rgba(223,158,71,0.08) 0%, rgba(5,16,12,0) 70%); z-index: 0; pointer-events: none; }
+        .home-page .section-bg-glow-left { position: absolute; left: -10%; top: 20%; width: 40%; height: 60%; background: radial-gradient(circle, rgba(223,158,71,0.08) 0%, rgba(5,16,12,0) 70%); z-index: 0; pointer-events: none; }
+        .home-page .section-bg-glow-right { position: absolute; right: -10%; bottom: 10%; width: 40%; height: 60%; background: radial-gradient(circle, rgba(223,158,71,0.08) 0%, rgba(5,16,12,0) 70%); z-index: 0; pointer-events: none; }
         
-        .page-bg-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 0; background-image: url('/images/hinh duoi trang chu.jpg'); background-size: 80%; background-position: right center; background-repeat: no-repeat; opacity: 0.12; mix-blend-mode: lighten; }
+        .home-page .page-bg-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 0; background-image: url('/images/hinh duoi trang chu.jpg'); background-size: 80%; background-position: right center; background-repeat: no-repeat; opacity: 0.12; mix-blend-mode: lighten; }
         
-        .section-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3.5rem; padding: 0 5%; gap: 2rem; }
-        .section-header-row h2 { font-family: var(--font-serif), serif; font-size: 2.2rem; color: #DF9E47 !important; margin: 0; font-weight: 400; flex: 1; text-align: left; }
-        .section-separator-flex { display: flex; align-items: center; justify-content: center; gap: 16px; flex: 1; }
-        .sep-line-flex { width: 80px; height: 1px; background-color: rgba(223, 158, 71, 0.4); }
-        .section-subtitle-flex { color: #9CA3AF; font-size: 0.95rem; font-weight: 300; margin: 0; flex: 1; text-align: right; }
+        .home-page .section-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3.5rem; padding: 0 5%; gap: 2rem; }
+        .home-page .section-header-row h2 { font-family: var(--font-serif), serif; font-size: 2.2rem; color: #DF9E47 !important; margin: 0; font-weight: 400; flex: 1; text-align: left; }
+        .home-page .section-separator-flex { display: flex; align-items: center; justify-content: center; gap: 16px; flex: 1; }
+        .home-page .sep-line-flex { width: 80px; height: 1px; background-color: rgba(223, 158, 71, 0.4); }
+        .home-page .section-subtitle-flex { color: #9CA3AF; font-size: 0.95rem; font-weight: 300; margin: 0; flex: 1; text-align: right; }
       `}} />
       <div className="page-bg-overlay"></div>
       

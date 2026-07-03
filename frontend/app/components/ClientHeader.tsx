@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import AuthNav from "./AuthNav";
 import CartButton from "./CartButton";
 
 export default function ClientHeader() {
   const pathname = usePathname();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 h-20 px-6 lg:px-24 flex items-center justify-between gap-4 border-b border-[#DF9E47]/10 backdrop-blur-md" style={{ backgroundColor: 'rgba(0, 26, 18, 0.95)' }}>
@@ -76,7 +78,50 @@ export default function ClientHeader() {
 
         <AuthNav />
         <CartButton />
+
+        {/* Mobile Hamburger Menu */}
+        <button 
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="flex md:hidden flex-col gap-1.5 justify-center items-center w-9 h-9 border border-[#DF9E47]/20 rounded-lg text-[#DF9E47] bg-transparent outline-none focus:outline-none"
+          style={{ cursor: 'pointer' }}
+          type="button"
+          aria-label="Menu"
+        >
+          <span className={`block w-4.5 h-0.5 bg-[#DF9E47] transition-transform duration-300 ${isMobileMenuOpen ? "rotate-45 translate-y-2" : ""}`} />
+          <span className={`block w-4.5 h-0.5 bg-[#DF9E47] transition-opacity duration-300 ${isMobileMenuOpen ? "opacity-0" : "opacity-100"}`} />
+          <span className={`block w-4.5 h-0.5 bg-[#DF9E47] transition-transform duration-300 ${isMobileMenuOpen ? "-rotate-45 -translate-y-2" : ""}`} />
+        </button>
       </div>
+
+      {/* Mobile Drawer Menu */}
+      {isMobileMenuOpen && (
+        <div className="absolute top-20 left-0 right-0 bg-[#001a12] border-b border-[#DF9E47]/10 flex flex-col p-6 gap-4 z-40 md:hidden animate-fade-in" style={{ backgroundColor: 'rgba(0, 26, 18, 0.98)' }}>
+          <Link 
+            href="/" 
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="text-xs font-bold uppercase tracking-widest py-3 border-b border-white/5 no-underline"
+            style={{ color: pathname === '/' ? '#DF9E47' : 'white' }}
+          >
+            TRANG CHỦ
+          </Link>
+          <Link 
+            href="/products" 
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="text-xs font-bold uppercase tracking-widest py-3 border-b border-white/5 no-underline"
+            style={{ color: (pathname === '/products' || pathname.startsWith('/product/')) ? '#DF9E47' : 'white' }}
+          >
+            SẢN PHẨM
+          </Link>
+          <Link 
+            href="/lien-he" 
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="text-xs font-bold uppercase tracking-widest py-3 no-underline"
+            style={{ color: pathname === '/lien-he' ? '#DF9E47' : 'white' }}
+          >
+            LIÊN HỆ
+          </Link>
+        </div>
+      )}
     </header>
   );
 }

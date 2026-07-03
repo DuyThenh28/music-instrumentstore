@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { getCurrentUser, fetchUserAttributes } from "aws-amplify/auth";
+import { useToast } from "../context/ToastContext";
 
 import type { CartItem, Customer, Order } from "../../types/cart";
 import { CartItemCard } from "../components/CartItemCard";
@@ -40,6 +41,7 @@ const createOrderTimestamp = () => ({
 
 export default function Cart() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [{ cart, selectedItems }, setCartState] =
     useState<CartState>(getInitialCartState);
   const [showCheckout, setShowCheckout] = useState(false);
@@ -150,17 +152,17 @@ export default function Cart() {
 
   const confirmOrder = async () => {
     if (selectedItems.length === 0) {
-      alert("Vui lòng chọn ít nhất 1 sản phẩm để thanh toán");
+      showToast("Vui lòng chọn ít nhất 1 sản phẩm để thanh toán", "warning");
       return;
     }
 
     if (!customer.name || !customer.phone || !customer.address) {
-      alert("Vui lòng nhập đầy đủ họ tên, số điện thoại và địa chỉ nhận hàng");
+      showToast("Vui lòng nhập đầy đủ họ tên, số điện thoại và địa chỉ nhận hàng", "warning");
       return;
     }
 
     if (!paymentMethod) {
-      alert("Vui lòng chọn phương thức thanh toán");
+      showToast("Vui lòng chọn phương thức thanh toán", "warning");
       return;
     }
 
@@ -247,7 +249,7 @@ export default function Cart() {
       }
     } catch (error) {
       console.error("Failed to create order", error);
-      alert("Không thể tạo đơn hàng. Vui lòng thử lại.");
+      showToast("Không thể tạo đơn hàng. Vui lòng thử lại.", "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -305,7 +307,7 @@ export default function Cart() {
             totalPrice={totalPrice}
             onOrderClick={() => {
               if (selectedItems.length === 0) {
-                alert("Vui lòng chọn sản phẩm cần thanh toán");
+                showToast("Vui lòng chọn sản phẩm cần thanh toán", "warning");
                 return;
               }
               setShowCheckout(true);

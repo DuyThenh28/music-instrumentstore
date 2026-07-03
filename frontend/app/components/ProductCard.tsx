@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { useCart } from "../context/CartContext";
+import { useToast } from "../context/ToastContext";
 import type { Product } from "../../types/product";
 
 type ProductCardProps = {
@@ -18,7 +19,7 @@ const currencyFormatter = new Intl.NumberFormat("vi-VN", {
 
 export function ProductCard({ product }: ProductCardProps) {
   const { addToCart } = useCart();
-  const [showSuccess, setShowSuccess] = useState(false);
+  const { showToast } = useToast();
   const [isHovered, setIsHovered] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
 
@@ -34,14 +35,21 @@ export function ProductCard({ product }: ProductCardProps) {
       quantity: 1,
     });
 
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 2000);
+    showToast(`Đã thêm ${product.name} vào giỏ hàng!`, "success");
   };
 
   const handleWishlist = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsWishlisted(!isWishlisted);
+    
+    const newWishlisted = !isWishlisted;
+    setIsWishlisted(newWishlisted);
+    
+    if (newWishlisted) {
+      showToast(`Đã thêm ${product.name} vào danh sách yêu thích!`, "success");
+    } else {
+      showToast(`Đã xóa ${product.name} khỏi danh sách yêu thích!`, "info");
+    }
   };
 
   // Generate a mock random review count based on product ID safely
@@ -50,7 +58,7 @@ export function ProductCard({ product }: ProductCardProps) {
 
   return (
     <article 
-      className="relative flex flex-col bg-white rounded-2xl overflow-hidden transition-all duration-300 border border-gray-100 hover:border-[#DF9E47]/30 group"
+      className="relative flex flex-col bg-white rounded-2xl overflow-hidden transition-all duration-300 border border-gray-100 hover:border-[#DF9E47]/30 group hover-float"
       style={{ boxShadow: isHovered ? '0 10px 40px -10px rgba(223,158,71,0.15)' : 'none' }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -87,7 +95,7 @@ export function ProductCard({ product }: ProductCardProps) {
         </p>
 
         <Link href={`/product/${product.id}`} className="block">
-          <h3 className="font-serif text-[#002B1F] text-lg leading-snug font-semibold line-clamp-2 mb-2 group-hover:text-[#A36B2B] transition-colors">
+          <h3 className="font-serif text-[#002B1F] text-lg leading-snug font-semibold line-clamp-2 mb-2 group-hover:text-[#A36B2B] transition-colors" style={{ minHeight: '3.5rem' }}>
             {product.name}
           </h3>
         </Link>
@@ -124,13 +132,6 @@ export function ProductCard({ product }: ProductCardProps) {
           </button>
         </div>
       </div>
-
-      {showSuccess && (
-        <div className="fixed bottom-8 right-8 z-[9999] bg-[#002B1F] text-white px-6 py-3 rounded-lg shadow-2xl flex items-center gap-3 animate-fade-in-up">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#DF9E47" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>
-          <span className="font-medium text-sm">Đã thêm vào giỏ hàng!</span>
-        </div>
-      )}
     </article>
   );
 }

@@ -1,6 +1,6 @@
 export default function ContactPage() {
   return (
-    <main className="min-h-screen bg-[#f7f7f4] pt-[80px]" style={{ paddingTop: '80px', backgroundColor: '#f7f7f4' }}>
+    <main className="min-h-screen bg-[#f7f7f4] pt-20" style={{ paddingTop: '80px', backgroundColor: '#f7f7f4' }}>
       <section className="relative bg-[#0b1d16] text-white py-24 px-6 overflow-hidden" style={{ backgroundColor: '#0b1d16' }}>
         <div className="max-w-6xl mx-auto">
           <p className="text-[#c9a96e] font-sans font-bold tracking-[0.3em] uppercase text-sm" style={{ color: '#c9a96e' }}>

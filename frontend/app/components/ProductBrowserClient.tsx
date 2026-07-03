@@ -73,14 +73,32 @@ export function ProductBrowserClient({
       return matchSearch && matchBrand && matchCategory;
     });
 
-    if (sort === "low-high") {
+    if (sort === "price-asc") {
       result = [...result].sort((a, b) => a.price - b.price);
-    } else if (sort === "high-low") {
+    } else if (sort === "price-desc") {
       result = [...result].sort((a, b) => b.price - a.price);
     }
 
     return result;
   }, [products, search, brand, category, sort]);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
+
+  // Reset pagination to page 1 whenever filters change
+  const filterKey = `${search}-${brand}-${category}-${sort}`;
+  const [lastFilterKey, setLastFilterKey] = useState(filterKey);
+  if (filterKey !== lastFilterKey) {
+    setLastFilterKey(filterKey);
+    setCurrentPage(1);
+  }
+
+  const paginatedProducts = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredProducts.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredProducts, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
 
   const handleResetFilters = () => {
     setSearch("");
@@ -224,11 +242,51 @@ export function ProductBrowserClient({
             <p className="text-gray-500 text-lg">Không tìm thấy sản phẩm phù hợp.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
-            {filteredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
+          <>
+            <div key={currentPage} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 mb-12 animate-slide-up">
+              {paginatedProducts.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+
+            {/* PAGINATION CONTROLS */}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="w-10 h-10 rounded-lg flex items-center justify-center border border-gray-200 text-slate-600 hover:border-[#DF9E47] hover:text-[#A36B2B] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  style={{ cursor: currentPage === 1 ? 'not-allowed' : 'pointer' }}
+                >
+                  ←
+                </button>
+                
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`w-10 h-10 rounded-lg font-semibold text-sm transition-all ${
+                      currentPage === page
+                        ? "bg-[#002B1F] text-[#DF9E47] border border-[#002B1F]"
+                        : "border border-gray-200 text-slate-600 hover:border-[#DF9E47] hover:text-[#A36B2B]"
+                    }`}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {page}
+                  </button>
+                ))}
+
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="w-10 h-10 rounded-lg flex items-center justify-center border border-gray-200 text-slate-600 hover:border-[#DF9E47] hover:text-[#A36B2B] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  style={{ cursor: currentPage === totalPages ? 'not-allowed' : 'pointer' }}
+                >
+                  →
+                </button>
+              </div>
+            )}
+          </>
         )}
       </section>
 

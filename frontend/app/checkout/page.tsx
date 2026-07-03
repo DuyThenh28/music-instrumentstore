@@ -8,6 +8,8 @@ import { fetchAuthSession } from "aws-amplify/auth";
 import type { Order } from "../../types/cart";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { useToast } from "../context/ToastContext";
+import MusicLoading from "../components/MusicLoading";
 
 // Initialize Stripe Promise
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "");
@@ -121,6 +123,7 @@ function StripeForm({
 
 function CheckoutContent() {
   const router = useRouter();
+  const { showToast } = useToast();
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId") || "";
   const paymentMethod = searchParams.get("method") || "VNPay";
@@ -207,7 +210,7 @@ function CheckoutContent() {
   const handlePaymentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (paymentMethod === "Stripe" && isMockStripe && (!cardNumber || !cardExpiry || !cardCvc || !cardName)) {
-      alert("Vui lòng điền đầy đủ thông tin thẻ");
+      showToast("Vui lòng điền đầy đủ thông tin thẻ", "warning");
       return;
     }
 
@@ -264,7 +267,7 @@ function CheckoutContent() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center p-4 md:p-8">
+    <main className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center p-4 md:p-8 pt-[100px] md:pt-[120px] pb-16">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.08),transparent_40%)] pointer-events-none" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(99,102,241,0.08),transparent_40%)] pointer-events-none" />
 
@@ -407,10 +410,7 @@ function CheckoutContent() {
               {paymentMethod === "Stripe" && (
                 <div>
                   {isStripeLoading ? (
-                    <div className="text-center space-y-4">
-                      <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-                      <p className="text-sm text-slate-400">Đang khởi tạo kết nối cổng thanh toán Stripe...</p>
-                    </div>
+                    <MusicLoading message="Đang khởi tạo kết nối cổng thanh toán Stripe..." height="150px" theme="dark" />
                   ) : !isMockStripe && clientSecret ? (
                     /* Real Stripe Elements Form */
                     <Elements stripe={stripePromise} options={{ clientSecret }}>
@@ -512,10 +512,8 @@ function CheckoutContent() {
           )}
 
           {paymentStatus === "processing" && (
-            <div className="text-center space-y-4 animate-fade-in">
-              <div className="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-              <h2 className="text-xl font-bold text-slate-200">Đang Xử Lý Giao Dịch</h2>
-              <p className="text-sm text-slate-400">Vui lòng không tắt trình duyệt hoặc tải lại trang</p>
+            <div className="animate-fade-in">
+              <MusicLoading message="Đang xử lý giao dịch... Vui lòng không tắt trình duyệt." height="200px" theme="dark" />
             </div>
           )}
 
@@ -551,7 +549,7 @@ export default function CheckoutPage() {
   return (
     <Suspense fallback={
       <main className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center">
-        <div className="text-sm text-slate-400 animate-pulse">Đang tải trang thanh toán...</div>
+        <MusicLoading message="Đang tải trang thanh toán..." height="200px" theme="dark" />
       </main>
     }>
       <CheckoutContent />

@@ -6,9 +6,11 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { signUp, confirmSignUp, signInWithRedirect } from "aws-amplify/auth";
+import { useToast } from "../context/ToastContext";
 
 export default function Register() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [step, setStep] = useState<"REGISTER" | "CONFIRM_CODE">("REGISTER");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmationCode, setConfirmationCode] = useState("");
@@ -28,7 +30,7 @@ export default function Register() {
       await signInWithRedirect({ provider });
     } catch (error) {
       console.error(`OAuth error (${provider}):`, error);
-      alert(`Đăng nhập bằng ${provider} hiện chưa khả dụng (Chưa cấu hình OAuth trên hệ thống). Vui lòng sử dụng đăng ký bằng email tĩnh.`);
+      showToast(`Đăng nhập bằng ${provider} hiện chưa khả dụng (Chưa cấu hình OAuth). Vui lòng sử dụng email.`, "warning");
     }
   };
 
@@ -36,17 +38,17 @@ export default function Register() {
     e.preventDefault();
 
     if (!user.name || !user.email || !user.password || !user.confirmPassword) {
-      alert("Vui lòng nhập đầy đủ thông tin!");
+      showToast("Vui lòng nhập đầy đủ thông tin!", "warning");
       return;
     }
 
     if (user.password !== user.confirmPassword) {
-      alert("Mật khẩu nhập lại không khớp!");
+      showToast("Mật khẩu nhập lại không khớp!", "warning");
       return;
     }
 
     if (!agreeTerms) {
-      alert("Vui lòng đồng ý với Điều khoản & Chính sách của Aureate Forest Boutique!");
+      showToast("Vui lòng đồng ý với Điều khoản & Chính sách!", "warning");
       return;
     }
 
@@ -76,15 +78,15 @@ export default function Register() {
 
       if (nextStep.signUpStep === "CONFIRM_SIGN_UP") {
         setStep("CONFIRM_CODE");
-        alert("Một mã xác nhận (OTP) đã được gửi đến email của bạn. Vui lòng kiểm tra hộp thư!");
+        showToast("Mã xác nhận (OTP) đã được gửi đến email của bạn. Vui lòng kiểm tra!", "success");
       } else if (isSignUpComplete) {
-        alert("Đăng ký thành công!");
+        showToast("Đăng ký thành công!", "success");
         router.push("/login");
       }
     } catch (err) {
       const error = err as Error;
       console.error("Sign up error:", error);
-      alert(error.message || "Không thể đăng ký. Vui lòng thử lại!");
+      showToast(error.message || "Không thể đăng ký. Vui lòng thử lại!", "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -94,7 +96,7 @@ export default function Register() {
     e.preventDefault();
 
     if (!confirmationCode) {
-      alert("Vui lòng nhập mã xác nhận!");
+      showToast("Vui lòng nhập mã xác nhận!", "warning");
       return;
     }
 
@@ -105,32 +107,32 @@ export default function Register() {
         confirmationCode: confirmationCode,
       });
 
-      alert("Xác nhận tài khoản thành công! Bạn có thể đăng nhập ngay bây giờ.");
+      showToast("Xác nhận tài khoản thành công! Bạn có thể đăng nhập.", "success");
       router.push("/login");
     } catch (err) {
       const error = err as Error;
       console.error("Confirmation error:", error);
-      alert(error.message || "Mã xác nhận không chính xác. Vui lòng thử lại!");
+      showToast(error.message || "Mã xác nhận không chính xác. Vui lòng thử lại!", "error");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <main className="min-h-screen relative flex items-center justify-center lg:justify-between px-6 lg:px-24 py-12 overflow-hidden">
+    <main className="register-page-wrapper min-h-screen relative flex items-center justify-center lg:justify-between px-6 lg:px-24 py-12 overflow-hidden">
       <style dangerouslySetInnerHTML={{ __html: `
-        .luxury-bg {
+        .register-page-wrapper .luxury-bg {
           position: absolute;
           inset: 0;
           z-index: 0;
         }
-        .luxury-bg::after {
+        .register-page-wrapper .luxury-bg::after {
           content: "";
           position: absolute;
           inset: 0;
           background: linear-gradient(to right, rgba(2,10,6,0.95) 0%, rgba(2,10,6,0.6) 40%, rgba(2,10,6,0.2) 100%);
         }
-        .glass-card {
+        .register-page-wrapper .glass-card {
           background: rgba(250, 247, 242, 0.95);
           backdrop-filter: blur(10px);
           border-radius: 20px;
@@ -142,7 +144,7 @@ export default function Register() {
           width: 100%;
           max-width: 480px;
         }
-        .luxury-input-group {
+        .register-page-wrapper .luxury-input-group {
           display: flex;
           align-items: center;
           border: 1px solid #DF9E47;
@@ -150,7 +152,7 @@ export default function Register() {
           overflow: hidden;
           background: #fff;
         }
-        .luxury-input-icon {
+        .register-page-wrapper .luxury-input-icon {
           background: #F3E5D0;
           color: #9B6B22;
           padding: 12px 16px;
@@ -159,7 +161,7 @@ export default function Register() {
           justify-content: center;
           border-right: 1px solid rgba(223, 158, 71, 0.3);
         }
-        .luxury-input {
+        .register-page-wrapper .luxury-input {
           flex: 1;
           padding: 12px 16px;
           border: none;
@@ -168,10 +170,10 @@ export default function Register() {
           color: #374151;
           width: 100%;
         }
-        .luxury-input::placeholder {
+        .register-page-wrapper .luxury-input::placeholder {
           color: #9CA3AF;
         }
-        .luxury-btn {
+        .register-page-wrapper .luxury-btn {
           background: linear-gradient(135deg, #C58A3E 0%, #E6C280 50%, #C58A3E 100%);
           background-size: 200% auto;
           color: #fff;
@@ -186,10 +188,10 @@ export default function Register() {
           transition: 0.5s;
           box-shadow: 0 10px 20px rgba(197, 138, 62, 0.3);
         }
-        .luxury-btn:hover {
+        .register-page-wrapper .luxury-btn:hover {
           background-position: right center;
         }
-        .social-btn-lux {
+        .register-page-wrapper .social-btn-lux {
           display: flex;
           align-items: center;
           justify-content: center;
@@ -204,7 +206,7 @@ export default function Register() {
           cursor: pointer;
           transition: all 0.2s;
         }
-        .social-btn-lux:hover {
+        .register-page-wrapper .social-btn-lux:hover {
           background: #F9FAFB;
           border-color: #D1D5DB;
         }

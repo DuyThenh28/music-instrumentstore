@@ -4,10 +4,12 @@ import "../components/AmplifyConfig";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useToast } from "../context/ToastContext";
 import { fetchAuthSession, getCurrentUser, updatePassword } from "aws-amplify/auth";
 import AddressSelector from "../components/AddressSelector";
 import { OrderCard } from "../components/OrderCard";
 import type { Order } from "../../types/cart";
+import MusicLoading from "../components/MusicLoading";
 
 interface DbOrderItem {
   productId: string;
@@ -58,6 +60,7 @@ const currencyFormatter = new Intl.NumberFormat("vi-VN", {
 });
 
 export default function ProfilePage() {
+  const { showToast } = useToast();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
@@ -196,14 +199,14 @@ export default function ProfilePage() {
       });
 
       if (res.ok) {
-        alert("Cập nhật thông tin cá nhân thành công!");
+        showToast("Cập nhật thông tin cá nhân thành công!", "success");
         fetchData();
       } else {
-        alert("Không thể cập nhật thông tin. Vui lòng thử lại!");
+        showToast("Không thể cập nhật thông tin. Vui lòng thử lại!", "error");
       }
     } catch (err) {
       console.error("Update profile error:", err);
-      alert("Đã xảy ra lỗi khi lưu thông tin.");
+      showToast("Đã xảy ra lỗi khi lưu thông tin.", "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -212,26 +215,26 @@ export default function ProfilePage() {
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
-      alert("Mật khẩu mới và mật khẩu xác nhận không khớp!");
+      showToast("Mật khẩu mới và mật khẩu xác nhận không khớp!", "warning");
       return;
     }
 
     if (newPassword.length < 8) {
-      alert("Mật khẩu mới phải chứa ít nhất 8 ký tự!");
+      showToast("Mật khẩu mới phải chứa ít nhất 8 ký tự!", "warning");
       return;
     }
 
     setIsChangingPassword(true);
     try {
       await updatePassword({ oldPassword, newPassword });
-      alert("Đổi mật khẩu thành công!");
+      showToast("Đổi mật khẩu thành công!", "success");
       setOldPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (err) {
       console.error("Change password error:", err);
       const errMsg = err instanceof Error ? err.message : "Đã xảy ra lỗi khi đổi mật khẩu.";
-      alert(errMsg);
+      showToast(errMsg, "error");
     } finally {
       setIsChangingPassword(false);
     }
@@ -256,23 +259,21 @@ export default function ProfilePage() {
       });
 
       if (res.ok) {
-        alert("Đã xóa sản phẩm khỏi danh sách yêu thích!");
+        showToast("Đã xóa sản phẩm khỏi danh sách yêu thích!", "success");
         fetchData();
       } else {
-        alert("Không thể xóa sản phẩm. Vui lòng thử lại!");
+        showToast("Không thể xóa sản phẩm. Vui lòng thử lại!", "error");
       }
     } catch (err) {
       console.error("Wishlist remove error:", err);
-      alert("Đã xảy ra lỗi.");
+      showToast("Đã xảy ra lỗi.", "error");
     }
   };
 
   if (isAuthenticated === null) {
     return (
       <main className="min-h-[60vh] flex justify-center items-center bg-slate-50">
-        <div className="text-emerald-900 font-semibold tracking-wider animate-pulse uppercase">
-          Đang tải thông tin tài khoản...
-        </div>
+        <MusicLoading message="Xác thực tài khoản..." height="150px" />
       </main>
     );
   }
@@ -297,7 +298,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <main className="bg-slate-50 min-h-screen py-12 px-4">
+    <main className="bg-slate-50 min-h-screen pt-28 pb-12 px-4">
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col md:flex-row gap-8">
           
@@ -358,9 +359,7 @@ export default function ProfilePage() {
           {/* Content */}
           <section className="flex-1 bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-slate-100">
             {isLoadingData ? (
-              <div className="h-64 flex justify-center items-center">
-                <div className="text-slate-400 text-sm animate-pulse">Đang tải dữ liệu...</div>
-              </div>
+              <MusicLoading message="Đang tải dữ liệu..." height="300px" />
             ) : activeTab === "profile" ? (
               <div>
                 <h2 className="text-xl font-bold text-slate-800 mb-6 pb-2 border-b border-slate-100">

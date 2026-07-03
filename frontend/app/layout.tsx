@@ -1,5 +1,6 @@
 import "./globals.css";
 import { CartProvider } from "./context/CartContext";
+import { ToastProvider } from "./context/ToastContext";
 import ChatWidget from "./components/ChatWidget";
 import FloatingContacts from "./components/FloatingContacts";
 import { Playfair_Display, Inter } from "next/font/google";
@@ -34,8 +35,9 @@ export default function RootLayout({
     <html lang="vi">
       <body className={`${inter.variable} ${playfair.variable}`}>
         <AmplifyConfig>
-          <CartProvider>
-            <ConditionalLayout
+          <ToastProvider>
+            <CartProvider>
+              <ConditionalLayout
               header={
                 <ClientHeader />
               }
@@ -358,6 +360,7 @@ export default function RootLayout({
               {children}
             </ConditionalLayout>
           </CartProvider>
+          </ToastProvider>
         </AmplifyConfig>
       </body>
     </html>

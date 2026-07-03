@@ -763,7 +763,7 @@ button {
 /* PRODUCT DETAIL */
 .product-detail-page {
   max-width: 1280px;
-  margin: 3rem auto;
+  margin: 80px auto 3rem auto;
   padding: 0 5%;
 }
 
@@ -920,7 +920,7 @@ button {
 /* CART PAGE */
 .cart-page {
   max-width: 1280px;
-  margin: 3rem auto;
+  margin: 80px auto 3rem auto;
   padding: 0 5%;
 }
 
@@ -1384,7 +1384,7 @@ button {
 /* ORDERS PAGE */
 .orders-page {
   max-width: 1280px;
-  margin: 3rem auto;
+  margin: 80px auto 3rem auto;
   padding: 0 5%;
 }
 
@@ -2310,4 +2310,62 @@ body {
 
 * {
   box-sizing: border-box;
+}
+
+/* PREMIUM CUSTOM ANIMATIONS */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes scaleUp {
+  from {
+    transform: scale(0.96);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-scale-up {
+  animation: scaleUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.hover-float {
+  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.hover-float:hover {
+  transform: translateY(-6px) !important;
+  box-shadow: 0 16px 36px -12px rgba(223, 158, 71, 0.22) !important;
+}
+
+.hover-glow-gold {
+  transition: all 0.3s ease;
+}
+
+.hover-glow-gold:hover {
+  box-shadow: 0 0 15px rgba(223, 158, 71, 0.4);
+  border-color: #DF9E47 !important;
 }

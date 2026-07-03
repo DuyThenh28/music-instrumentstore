@@ -7,6 +7,8 @@ import Image from "next/image";
 import { useState } from "react";
 import { signIn, fetchAuthSession, signInWithRedirect } from "aws-amplify/auth";
 import { useRouter } from "next/navigation";
+import { useToast } from "../context/ToastContext";
+
 // Fallback configuration if not initialized in the module scope
 if (!Amplify.getConfig().Auth?.Cognito) {
   Amplify.configure({
@@ -21,6 +23,7 @@ if (!Amplify.getConfig().Auth?.Cognito) {
  
 export default function Login() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -32,14 +35,14 @@ export default function Login() {
       await signInWithRedirect({ provider });
     } catch (error) {
       console.error(`OAuth error (${provider}):`, error);
-      alert(`Đăng nhập bằng ${provider} hiện chưa khả dụng (Chưa cấu hình OAuth trên hệ thống). Vui lòng sử dụng đăng nhập bằng email.`);
+      showToast(`Đăng nhập bằng ${provider} hiện chưa khả dụng (Chưa cấu hình OAuth). Vui lòng sử dụng email.`, "warning");
     }
   };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
-      alert("Vui lòng nhập email và mật khẩu!");
+      showToast("Vui lòng nhập email và mật khẩu!", "warning");
       return;
     }
     setIsSubmitting(true);
@@ -57,7 +60,7 @@ export default function Login() {
       } catch (sessionError) {
         console.warn("Could not fetch session in login redirect:", sessionError);
       }
-      alert("Đăng nhập thành công!");
+      showToast("Đăng nhập thành công!", "success");
       router.refresh();
       if (isAdminOrStaff) {
         window.location.href = "/admin";
@@ -66,7 +69,7 @@ export default function Login() {
       }
     } catch (err) {
       const error = err as Error;
-      alert(error.message || "Tên đăng nhập hoặc mật khẩu không đúng!");
+      showToast(error.message || "Tên đăng nhập hoặc mật khẩu không đúng!", "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -85,7 +88,7 @@ export default function Login() {
           padding: 2rem;
           font-family: var(--font-sans), sans-serif;
         }
-        .login-card {
+        .login-page-wrapper .login-card {
           width: 100%;
           max-width: 1100px;
           min-height: 750px;
@@ -98,7 +101,7 @@ export default function Login() {
           position: relative;
           z-index: 10;
         }
-        .login-left {
+        .login-page-wrapper .login-left {
           width: 42%;
           background-color: #1F332A;
           position: relative;
@@ -108,7 +111,7 @@ export default function Login() {
           padding-top: 4rem;
           overflow: hidden;
         }
-        .login-right {
+        .login-page-wrapper .login-right {
           width: 58%;
           padding: 4rem 6rem;
           display: flex;
@@ -116,26 +119,26 @@ export default function Login() {
           justify-content: center;
         }
         @media (max-width: 992px) {
-          .login-right { padding: 3rem 4rem; }
+          .login-page-wrapper .login-right { padding: 3rem 4rem; }
         }
         @media (max-width: 768px) {
           .login-page-wrapper { padding: 1rem; }
-          .login-card {
+          .login-page-wrapper .login-card {
             flex-direction: column;
             min-height: auto;
             border-radius: 1.5rem;
           }
-          .login-left {
+          .login-page-wrapper .login-left {
             width: 100%;
             min-height: 400px;
             padding-top: 3rem;
           }
-          .login-right {
+          .login-page-wrapper .login-right {
             width: 100%;
             padding: 2rem;
           }
         }
-        .login-input {
+        .login-page-wrapper .login-input {
           width: 100%;
           padding: 14px 16px;
           background: #fff;
@@ -146,12 +149,12 @@ export default function Login() {
           transition: all 0.2s;
           box-sizing: border-box;
         }
-        .login-input:focus {
+        .login-page-wrapper .login-input:focus {
           outline: none;
           border-color: #002B1F;
           box-shadow: 0 0 0 1px #002B1F;
         }
-        .login-btn {
+        .login-page-wrapper .login-btn {
           width: 100%;
           background: #002B1F;
           color: #fff;
@@ -171,9 +174,9 @@ export default function Login() {
           box-shadow: 0 8px 20px rgba(0,43,31,0.2);
           border: none;
         }
-        .login-btn:hover:not(:disabled) { background: #054030; }
-        .login-btn:disabled { opacity: 0.7; cursor: not-allowed; }
-        .social-btn {
+        .login-page-wrapper .login-btn:hover:not(:disabled) { background: #054030; }
+        .login-page-wrapper .login-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+        .login-page-wrapper .social-btn {
           display: flex;
           align-items: center;
           justify-content: center;
@@ -189,8 +192,8 @@ export default function Login() {
           color: #374151;
           width: 100%;
         }
-        .social-btn:hover { background: #F9FAFB; }
-        .trust-badges {
+        .login-page-wrapper .social-btn:hover { background: #F9FAFB; }
+        .login-page-wrapper .trust-badges {
           width: 100%;
           max-width: 1100px;
           margin-top: 2rem;
@@ -205,17 +208,17 @@ export default function Login() {
           z-index: 10;
         }
         @media (max-width: 768px) {
-          .trust-badges {
+          .login-page-wrapper .trust-badges {
             grid-template-columns: 1fr;
             padding: 2rem;
           }
         }
-        .badge-item {
+        .login-page-wrapper .badge-item {
           display: flex;
           align-items: flex-start;
           gap: 1rem;
         }
-        .badge-icon {
+        .login-page-wrapper .badge-icon {
           width: 48px;
           height: 48px;
           border-radius: 50%;
@@ -226,8 +229,8 @@ export default function Login() {
           flex-shrink: 0;
           color: #002B1F;
         }
-        .form-group { margin-bottom: 1.25rem; }
-        .form-label {
+        .login-page-wrapper .form-group { margin-bottom: 1.25rem; }
+        .login-page-wrapper .form-label {
           font-size: 11px;
           font-weight: 700;
           color: #002B1F;
@@ -236,8 +239,8 @@ export default function Login() {
           display: block;
           margin-bottom: 8px;
         }
-        .input-wrapper { position: relative; }
-        .input-icon {
+        .login-page-wrapper .input-wrapper { position: relative; }
+        .login-page-wrapper .input-icon {
           position: absolute;
           left: 16px;
           top: 50%;
@@ -248,8 +251,8 @@ export default function Login() {
           height: 20px;
           transition: color 0.2s;
         }
-        .input-wrapper:focus-within .input-icon { color: #002B1F; }
-        .eye-icon {
+        .login-page-wrapper .input-wrapper:focus-within .input-icon { color: #002B1F; }
+        .login-page-wrapper .eye-icon {
           position: absolute;
           right: 16px;
           top: 50%;

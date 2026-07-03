@@ -8,6 +8,7 @@ import type { Order } from "../../types/cart";
 import { OrderTabs } from "../components/OrderTabs";
 import { EmptyOrders } from "../components/EmptyOrders";
 import { OrderCard } from "../components/OrderCard";
+import MusicLoading from "../components/MusicLoading";
 
 const getStoredOrders = (): Order[] => {
   if (typeof window === "undefined") {
@@ -44,6 +45,7 @@ interface DbOrder {
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [activeTab, setActiveTab] = useState("Chờ xác nhận");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Load local storage first
@@ -54,7 +56,10 @@ export default function OrdersPage() {
       try {
         const session = await fetchAuthSession();
         const token = session.tokens?.idToken?.toString();
-        if (!token) return;
+        if (!token) {
+          setLoading(false);
+          return;
+        }
 
         const res = await fetch("/api/users/orders", {
           headers: {
@@ -84,6 +89,8 @@ export default function OrdersPage() {
         }
       } catch (err) {
         console.error("Failed to fetch user DB orders:", err);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -111,7 +118,9 @@ export default function OrdersPage() {
         onTabChange={setActiveTab}
       />
 
-      {filteredOrders.length === 0 ? (
+      {loading ? (
+        <MusicLoading message="Đang tải danh sách đơn hàng..." height="300px" />
+      ) : filteredOrders.length === 0 ? (
         <EmptyOrders />
       ) : (
         <section className="orders-list">

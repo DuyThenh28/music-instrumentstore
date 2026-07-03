@@ -10,6 +10,7 @@ import { fetchAuthSession, getCurrentUser } from "aws-amplify/auth";
 import { useRouter } from "next/navigation";
 
 import { useCart } from "../../context/CartContext";
+import { useToast } from "../../context/ToastContext";
 import type { Product } from "../../../types/product";
 
 type ProductDetailClientProps = {
@@ -41,7 +42,7 @@ const currencyFormatter = new Intl.NumberFormat("vi-VN", {
 export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const router = useRouter();
   const { addToCart } = useCart();
-  const [showSuccess, setShowSuccess] = useState(false);
+  const { showToast } = useToast();
 
   // Authentication State
   const [user, setUser] = useState<{ userId: string; username: string } | null>(null);
@@ -143,13 +144,12 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
       quantity: 1,
     });
 
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 2200);
+    showToast(`Đã thêm ${product.name} vào giỏ hàng!`, "success");
   };
 
   const handleToggleWishlist = async () => {
     if (!user) {
-      alert("Vui lòng đăng nhập để thêm sản phẩm vào danh sách yêu thích!");
+      showToast("Vui lòng đăng nhập để thêm sản phẩm vào danh sách yêu thích!", "warning");
       router.push("/login");
       return;
     }
@@ -170,9 +170,9 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
         });
         if (res.ok) {
           setIsInWishlist(false);
-          alert("Đã xóa sản phẩm khỏi danh sách yêu thích!");
+          showToast("Đã xóa sản phẩm khỏi danh sách yêu thích!", "info");
         } else {
-          alert("Lỗi khi xóa khỏi danh sách yêu thích.");
+          showToast("Lỗi khi xóa khỏi danh sách yêu thích.", "error");
         }
       } else {
         // Add to wishlist
@@ -186,14 +186,14 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
         });
         if (res.ok) {
           setIsInWishlist(true);
-          alert("Đã thêm sản phẩm vào danh sách yêu thích!");
+          showToast("Đã thêm sản phẩm vào danh sách yêu thích!", "success");
         } else {
-          alert("Lỗi khi thêm vào danh sách yêu thích.");
+          showToast("Lỗi khi thêm vào danh sách yêu thích.", "error");
         }
       }
     } catch (err) {
       console.error("Wishlist action failed:", err);
-      alert("Đã xảy ra lỗi. Vui lòng thử lại sau!");
+      showToast("Đã xảy ra lỗi. Vui lòng thử lại sau!", "error");
     } finally {
       setIsUpdatingWishlist(false);
     }
@@ -202,7 +202,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const handleSubmitRating = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
-      alert("Vui lòng đăng nhập để đánh giá!");
+      showToast("Vui lòng đăng nhập để đánh giá!", "warning");
       return;
     }
 
@@ -226,15 +226,15 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
 
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || "Gửi đánh giá thất bại.");
+        showToast(data.error || "Gửi đánh giá thất bại.", "error");
       } else {
-        alert("Cảm ơn bạn đã gửi đánh giá!");
+        showToast("Cảm ơn bạn đã gửi đánh giá!", "success");
         setRatingComment("");
         fetchRatingsAndComments();
       }
     } catch (err) {
       console.error("Rating submission error:", err);
-      alert("Đã xảy ra lỗi khi gửi đánh giá.");
+      showToast("Đã xảy ra lỗi khi gửi đánh giá.", "error");
     } finally {
       setIsSubmittingRating(false);
     }
@@ -243,12 +243,12 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
-      alert("Vui lòng đăng nhập để bình luận!");
+      showToast("Vui lòng đăng nhập để bình luận!", "warning");
       return;
     }
 
     if (!commentInput.trim()) {
-      alert("Vui lòng nhập nội dung bình luận.");
+      showToast("Vui lòng nhập nội dung bình luận.", "warning");
       return;
     }
 
@@ -271,14 +271,15 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
 
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || "Gửi bình luận thất bại.");
+        showToast(data.error || "Gửi bình luận thất bại.", "error");
       } else {
+        showToast("Gửi bình luận thành công!", "success");
         setCommentInput("");
         fetchRatingsAndComments();
       }
     } catch (err) {
       console.error("Comment submission error:", err);
-      alert("Đã xảy ra lỗi khi gửi bình luận.");
+      showToast("Đã xảy ra lỗi khi gửi bình luận.", "error");
     } finally {
       setIsSubmittingComment(false);
     }
@@ -551,11 +552,6 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
         )}
       </section>
 
-      {showSuccess ? (
-        <div className="cart-success-toast">
-          Đã thêm {product.name} vào giỏ hàng.
-        </div>
-      ) : null}
     </main>
   );
 }
