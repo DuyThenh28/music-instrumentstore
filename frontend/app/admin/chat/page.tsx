@@ -323,7 +323,7 @@ export default function AdminChatPage() {
     const link = document.createElement("a");
     link.href = url;
     
-    const safeName = selectedSession.userName.replace(/[^a-zA-Z0-9]/g, "_");
+    const safeName = (selectedSession.userName || "Khach_Hang").replace(/[^a-zA-Z0-9]/g, "_");
     link.download = `Sao_Luu_Chat_${safeName}_${selectedSession.sessionId.substring(0, 8)}.txt`;
     document.body.appendChild(link);
     link.click();
