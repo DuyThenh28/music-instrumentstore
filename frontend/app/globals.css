@@ -305,6 +305,10 @@ section:nth-child(even) {
   grid-template-columns: repeat(3, 1fr);
 }
 
+.grid-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
 .grid-4 {
   grid-template-columns: repeat(4, 1fr);
 }
@@ -378,6 +382,81 @@ footer a:hover {
   }
 }
 
+/* Hero Section */
+.hero-section {
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.hero-subtitle {
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 2rem;
+}
+
+.hero-buttons {
+  display: flex;
+  gap: 1rem;
+}
+
+.btn-outline-light {
+  border-color: white;
+  color: white;
+}
+
+.btn-outline-light:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.hero-image {
+  text-align: center;
+}
+
+.brand-slogan {
+  color: var(--color-secondary);
+}
+
+.error-text {
+  color: var(--color-on-surface-variant);
+}
+
+/* Footer */
+.footer-section {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.footer-column h3,
+.footer-column h4 {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.footer-column h3 {
+  font-size: 20px;
+}
+
+.footer-column p,
+.footer-column a,
+.footer-column li {
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 0.5rem;
+}
+
+.footer-column ul {
+  list-style: none;
+}
+
+.footer-divider {
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  padding-top: 2rem;
+  text-align: center;
+  font-size: 12px;
+}
+
 /* Utility Classes */
 .text-center {
   text-align: center;
@@ -391,10 +470,270 @@ footer a:hover {
   margin-bottom: 1.5rem;
 }
 
+.mb-8 {
+  margin-bottom: 2rem;
+}
+
 .gap-4 {
   gap: 1.5rem;
 }
 
+.gap-8 {
+  gap: 2rem;
+}
+
 .py-8 {
   padding: 2rem 0;
+}
+
+.mt-8 {
+  margin-top: 2rem;
+}
+
+/* Admin Styles */
+.admin-page-container {
+  display: flex;
+  min-height: 60vh;
+}
+
+.admin-loading,
+.admin-loading-text {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-primary);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+}
+
+.login-card {
+  padding: 3.5rem 2.5rem;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 0.25rem;
+}
+
+.login-icon {
+  font-size: 56px;
+  text-align: center;
+}
+
+.login-desc {
+  margin-bottom: 2rem;
+  line-height: 1.6;
+  color: var(--color-on-surface);
+}
+
+.login-register {
+  margin-top: 1.5rem;
+  text-align: center;
+  color: var(--color-on-surface);
+}
+
+.login-register a {
+  color: var(--color-secondary);
+  font-weight: 600;
+}
+
+.primary-btn {
+  width: 100%;
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
+  padding: 12px 24px;
+  border: none;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 600;
+}
+
+.primary-btn:hover {
+  background-color: #053d2e;
+}
+
+.admin-layout {
+  display: flex;
+  width: 100%;
+}
+
+.admin-sidebar {
+  width: 220px;
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
+  padding: 2rem 0;
+}
+
+.admin-content {
+  flex: 1;
+  padding: 2rem;
+  background-color: var(--color-background);
+}
+
+.admin-section {
+  background-color: var(--color-surface);
+  padding: 2rem;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 0.25rem;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.section-header h2 {
+  margin: 0;
+}
+
+.add-product-btn {
+  background-color: var(--color-secondary);
+  color: var(--color-on-secondary);
+  padding: 10px 20px;
+  border: none;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.add-product-btn:hover {
+  background-color: #c66f00;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 0.25rem;
+  overflow: hidden;
+}
+
+.admin-table thead {
+  background-color: var(--color-surface-container-low);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.admin-table th {
+  padding: 1rem;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-on-surface-variant);
+}
+
+.admin-table td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--color-border-subtle);
+  color: var(--color-on-surface);
+}
+
+.admin-table tbody tr:hover {
+  background-color: var(--color-surface-container-low);
+}
+
+.admin-form-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 0.25rem;
+  font-size: 16px;
+  font-family: "Inter", sans-serif;
+  color: var(--color-on-surface);
+  background-color: var(--color-surface);
+  transition: all 0.3s ease;
+}
+
+.admin-form-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(6, 78, 59, 0.1);
+}
+
+.admin-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+  color: var(--color-on-surface-variant);
+}
+
+.admin-modal {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.admin-modal-content {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 0.25rem;
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 28rem;
+  box-shadow: 0 20px 40px rgba(6, 78, 59, 0.1);
+}
+
+.admin-modal-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-on-surface);
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.admin-modal-close {
+  float: right;
+  font-size: 24px;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--color-on-surface-variant);
+  transition: color 0.2s ease;
+}
+
+.admin-modal-close:hover {
+  color: var(--color-on-surface);
+}
+
+.flex {
+  display: flex;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.justify-end {
+  justify-content: flex-end;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.gap-2 {
+  gap: 0.5rem;
+}
+
+.gap-4 {
+  gap: 1rem;
+}
+
+.space-y-4 > * + * {
+  margin-top: 1rem;
 }

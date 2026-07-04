@@ -25,19 +25,19 @@ export default async function Home() {
       <HomeRedirect />
 
       {/* HERO */}
-      <section style={{ backgroundColor: "var(--color-primary)", color: "var(--color-on-primary)" }}>
+      <section className="hero-section">
         <div className="container grid grid-2 items-center gap-8">
           <div>
-            <h1 style={{ color: "var(--color-on-primary)", marginBottom: "1.5rem" }}>Aureate Forest</h1>
-            <p className="text-lg" style={{ color: "rgba(255, 255, 255, 0.9)", marginBottom: "2rem" }}>
+            <h1>Aureate Forest</h1>
+            <p className="text-lg hero-subtitle">
               Saxophone chất lượng cao, âm thanh chuẩn, bảo hành uy tín cho người mới học đến nghệ sĩ chuyên nghiệp.
             </p>
-            <div style={{ display: "flex", gap: "1rem" }}>
+            <div className="hero-buttons">
               <Link href="/products" className="btn-secondary">Mua ngay</Link>
-              <Link href="/products" className="btn-outline" style={{ borderColor: "white", color: "white" }}>Xem sản phẩm</Link>
+              <Link href="/products" className="btn-outline btn-outline-light">Xem sản phẩm</Link>
             </div>
           </div>
-          <div style={{ textAlign: "center" }}>
+          <div className="hero-image">
             {/* Hero image placeholder */}
           </div>
         </div>
@@ -46,7 +46,7 @@ export default async function Home() {
       {/* CATEGORIES */}
       <section>
         <div className="container">
-          <h2 style={{ textAlign: "center", marginBottom: "3rem" }}>Danh Mục Sản Phẩm</h2>
+          <h2 className="text-center mb-8">Danh Mục Sản Phẩm</h2>
           <div className="grid grid-4">
             {categories.map((cat) => {
               const product = products.find((p) => p.type === cat);
@@ -70,7 +70,7 @@ export default async function Home() {
       {/* BRANDS */}
       <section>
         <div className="container">
-          <h2 style={{ textAlign: "center", marginBottom: "3rem" }}>Thương Hiệu Nổi Bật</h2>
+          <h2 className="text-center mb-8">Thương Hiệu Nổi Bật</h2>
           <div className="grid grid-4">
             {brandsData.map((brand) => (
               <Link key={brand.name} href={`/products?brand=${encodeURIComponent(brand.name)}`} className="card">
@@ -83,7 +83,7 @@ export default async function Home() {
                   />
                 </div>
                 <div className="card-content">
-                  <p className="text-sm" style={{ color: "var(--color-secondary)" }}>{brand.slogan}</p>
+                  <p className="text-sm brand-slogan">{brand.slogan}</p>
                 </div>
               </Link>
             ))}
@@ -94,9 +94,9 @@ export default async function Home() {
       {/* FEATURED PRODUCTS */}
       <section>
         <div className="container">
-          <h2 style={{ textAlign: "center", marginBottom: "3rem" }}>Sản Phẩm Nổi Bật</h2>
+          <h2 className="text-center mb-8">Sản Phẩm Nổi Bật</h2>
           {error ? (
-            <p style={{ textAlign: "center", color: "var(--color-on-surface-variant)" }}>{error}</p>
+            <p className="text-center error-text">{error}</p>
           ) : (
             <>
               <div className="grid grid-4 mb-4">
@@ -105,10 +105,10 @@ export default async function Home() {
                     <ProductCard key={product.id} product={product} />
                   ))
                 ) : (
-                  <p style={{ textAlign: "center", color: "var(--color-on-surface-variant)" }}>Không có sản phẩm nào nổi bật.</p>
+                  <p className="text-center error-text">Không có sản phẩm nào nổi bật.</p>
                 )}
               </div>
-              <div style={{ textAlign: "center", marginTop: "3rem" }}>
+              <div className="text-center mt-8">
                 <Link href="/products" className="btn-outline">
                   XEM TẤT CẢ SẢN PHẨM
                 </Link>
