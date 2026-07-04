@@ -164,6 +164,26 @@ export default function ChatWidget() {
     }
   };
 
+  // Trở lại chế độ chat với AI khi đóng phiên
+  const handleRestartAI = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/chat/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId }),
+      });
+      if (res.ok) {
+        setSessionStatus("BOT");
+        await fetchHistory();
+      }
+    } catch (err) {
+      console.error("Restart AI error:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Gửi tin nhắn mới
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
@@ -419,64 +439,85 @@ export default function ChatWidget() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Emoji Shortcuts & File upload indicator */}
-          <div className="px-3 pt-2 bg-white dark:bg-[#06261d] border-t border-slate-100 dark:border-primary-container/10 flex items-center justify-between gap-2">
-            {/* Emoji quick selects */}
-            <div className="flex gap-1.5 overflow-x-auto py-0.5">
-              {EMOJIS.map((emoji) => (
-                <button
-                  key={emoji}
-                  type="button"
-                  onClick={() => setInput((prev) => prev + emoji)}
-                  disabled={sessionStatus === "CLOSED"}
-                  className="text-sm hover:scale-125 transition-transform cursor-pointer p-0.5 disabled:opacity-40 disabled:scale-100"
-                >
-                  {emoji}
-                </button>
-              ))}
+          {/* Emoji Shortcuts & File upload selector (Ẩn khi CLOSED để tránh bấm nhầm) */}
+          {sessionStatus !== "CLOSED" && (
+            <div className="px-3 pt-2 bg-white dark:bg-[#06261d] border-t border-slate-100 dark:border-primary-container/10 flex items-center justify-between gap-2 shrink-0">
+              <div className="flex gap-1.5 overflow-x-auto py-0.5">
+                {EMOJIS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => setInput((prev) => prev + emoji)}
+                    className="text-sm hover:scale-125 transition-transform cursor-pointer p-0.5"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+                className="hidden"
+              />
             </div>
+          )}
 
-            {/* Hidden file input */}
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileUpload}
-              disabled={sessionStatus === "CLOSED"}
-              className="hidden"
-            />
-          </div>
+          {/* Chat Options Area when CLOSED, or normal Input box when ACTIVE */}
+          {sessionStatus === "CLOSED" ? (
+            <div className="p-4 bg-white dark:bg-[#06261d] border-t border-slate-100 dark:border-primary-container/20 flex flex-col gap-2 shrink-0 transition-colors duration-300">
+              <p className="text-[11px] text-center text-slate-500 dark:text-emerald-100/40 mb-1 font-medium">Phiên hỗ trợ đã đóng. Bạn muốn tiếp tục?</p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleRestartAI}
+                  disabled={isLoading}
+                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-[#031d16] dark:hover:bg-[#053c2f] text-slate-700 dark:text-emerald-55 text-xs font-bold rounded-xl border border-slate-200/20 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  🤖 Chat tiếp với AI
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRequestHuman}
+                  disabled={isLoading}
+                  className="flex-1 py-2.5 bg-[#003527] hover:bg-[#064e3b] dark:bg-[#fe932c] dark:hover:bg-[#d97706] text-white dark:text-[#002B1F] text-xs font-bold rounded-xl active:scale-95 transition-all cursor-pointer shadow-sm disabled:opacity-50"
+                >
+                  📞 Gặp nhân viên
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="p-3 bg-white dark:bg-[#06261d] border-t border-slate-100 dark:border-primary-container/20 flex items-center gap-2 transition-colors duration-300">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isLoading}
+                className="w-10 h-10 shrink-0 bg-slate-100 dark:bg-[#031d16] hover:bg-slate-200 dark:hover:bg-[#053c2f] text-slate-500 dark:text-emerald-100/75 flex items-center justify-center rounded-xl transition-all active:scale-[0.93] disabled:opacity-40 cursor-pointer border border-slate-200/20"
+                title="Đính kèm file (Tối đa 5MB)"
+              >
+                <Paperclip className="w-4 h-4" />
+              </button>
 
-          {/* Chat Input */}
-          <div className="p-3 bg-white dark:bg-[#06261d] flex items-center gap-2 transition-colors duration-300">
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={sessionStatus === "CLOSED" || isLoading}
-              className="w-10 h-10 shrink-0 bg-slate-100 dark:bg-[#031d16] hover:bg-slate-200 dark:hover:bg-[#053c2f] text-slate-500 dark:text-emerald-100/75 flex items-center justify-center rounded-xl transition-all active:scale-[0.93] disabled:opacity-40 cursor-pointer border border-slate-200/20"
-              title="Đính kèm file (Tối đa 5MB)"
-            >
-              <Paperclip className="w-4 h-4" />
-            </button>
-
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-              disabled={sessionStatus === "CLOSED"}
-              placeholder={sessionStatus === "CLOSED" ? "Phiên hỗ trợ đã đóng" : "Nhập yêu cầu..."}
-              className="flex-1 bg-slate-50 dark:bg-[#031d16] border border-slate-100 dark:border-primary-container/20 rounded-xl px-4 py-2.5 text-sm text-slate-800 dark:text-emerald-50 placeholder-slate-400 outline-none focus:border-[#003527] dark:focus:border-[#fe932c] transition-all disabled:opacity-55 disabled:cursor-not-allowed"
-            />
-            
-            <button
-              type="button"
-              onClick={sendMessage}
-              disabled={!input.trim() || isLoading || sessionStatus === "CLOSED"}
-              className="w-10 h-10 shrink-0 bg-[#003527] dark:bg-[#fe932c] hover:bg-[#064e3b] dark:hover:bg-[#d97706] text-white dark:text-[#002B1F] flex items-center justify-center rounded-xl transition-all active:scale-[0.93] disabled:opacity-40 disabled:scale-100 cursor-pointer shadow-sm"
-            >
-              <Send className="w-4 h-4" />
-            </button>
-          </div>
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                placeholder="Nhập yêu cầu..."
+                className="flex-1 bg-slate-50 dark:bg-[#031d16] border border-slate-100 dark:border-primary-container/20 rounded-xl px-4 py-2.5 text-sm text-slate-800 dark:text-emerald-50 placeholder-slate-400 outline-none focus:border-[#003527] dark:focus:border-[#fe932c] transition-all disabled:opacity-55 disabled:cursor-not-allowed"
+              />
+              
+              <button
+                type="button"
+                onClick={sendMessage}
+                disabled={!input.trim() || isLoading}
+                className="w-10 h-10 shrink-0 bg-[#003527] dark:bg-[#fe932c] hover:bg-[#064e3b] dark:hover:bg-[#d97706] text-white dark:text-[#002B1F] flex items-center justify-center rounded-xl transition-all active:scale-[0.93] disabled:opacity-40 disabled:scale-100 cursor-pointer shadow-sm"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
+          )}
 
         </div>
       ) : (
