@@ -89,7 +89,11 @@ export default function AuthNav() {
   };
  
   if (loading) {
-    return <span className="auth-loading" style={{ color: "var(--color-on-surface-variant)", fontSize: "13px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.08em" }}>Đang tải...</span>;
+    return (
+      <span className="text-white/60 text-xs font-bold uppercase tracking-widest">
+        Đang tải...
+      </span>
+    );
   }
  
   if (user) {

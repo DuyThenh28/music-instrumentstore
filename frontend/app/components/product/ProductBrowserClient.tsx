@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Search, ChevronDown, RotateCcw } from "lucide-react";
 import type { Product } from "../../../types/product";
 import { ProductCard } from "./ProductCard";
+import { Pagination } from "../common/Pagination";
 
 interface ProductBrowserClientProps {
   products: Product[];
@@ -110,16 +111,19 @@ export function ProductBrowserClient({
   };
 
   return (
-    <main className="min-h-screen bg-[#FDFBF7] pt-16 md:pt-20" style={{ minHeight: '100vh', backgroundColor: '#FDFBF7' }}>
+    <main className="min-h-screen bg-surface-cream dark:bg-[#02140f] pt-16 md:pt-20 transition-colors duration-300">
       {/* HERO SECTION */}
-      <section className="relative w-full py-16 md:py-24 px-6 lg:px-24 overflow-hidden" style={{ background: 'linear-gradient(135deg, #001A12 0%, #053324 100%)' }}>
+      <section
+        className="relative w-full py-16 md:py-24 px-6 lg:px-24 overflow-hidden"
+        style={{ background: "linear-gradient(135deg, #001A12 0%, #053324 100%)" }}
+      >
         {/* Background Image */}
         <div className="absolute top-0 right-0 w-2/3 h-full z-0 opacity-40 mix-blend-luminosity mask-gradient-left">
           <Image
             src="/images/cay dan trang chu.jpg"
             alt="Saxophone Background"
             fill
-            style={{ objectFit: 'cover', objectPosition: 'left center' }}
+            style={{ objectFit: "cover", objectPosition: "left center" }}
             priority
             unoptimized
           />
@@ -128,16 +132,13 @@ export function ProductBrowserClient({
 
         {/* Hero Content */}
         <div className="relative z-10 max-w-4xl">
-          <h1 
-            className="text-4xl md:text-5xl font-serif text-[#DF9E47] mb-6 tracking-wide drop-shadow-md"
-            style={{ color: '#DF9E47' }}
-          >
+          <h1 className="text-4xl md:text-5xl font-serif text-[#DF9E47] mb-6 tracking-wide drop-shadow-md">
             Danh Sách Sản Phẩm
           </h1>
-          
+
           <div className="flex items-center gap-4 mb-6">
             <div className="w-12 h-px bg-[#DF9E47]"></div>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="#DF9E47" style={{ transform: 'rotate(45deg)' }}><rect x="6" y="6" width="12" height="12" /></svg>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="#DF9E47" style={{ transform: "rotate(45deg)" }}><rect x="6" y="6" width="12" height="12" /></svg>
             <div className="w-12 h-px bg-[#DF9E47]"></div>
           </div>
 
@@ -148,71 +149,66 @@ export function ProductBrowserClient({
       </section>
 
       {/* FILTER BAR - Positioned below hero section */}
-      <section className="relative z-20 px-4 md:px-6 lg:px-24 -mt-6 md:-mt-12" style={{ marginTop: '-1.5rem', position: 'relative', zIndex: 20, padding: '0 1rem' }}>
-        <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-[0_10px_40px_-10px_rgba(223,158,71,0.15)] border border-gray-100 p-4 md:p-6" style={{ backgroundColor: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(12px)', borderRadius: '1rem', boxShadow: '0 10px 40px -10px rgba(223,158,71,0.15)', border: '1px solid #f3f4f6', padding: '1.5rem' }}>
-          <div className="flex flex-wrap lg:flex-nowrap gap-4 items-center" style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center' }}>
-            
+      <section className="relative z-20 px-4 md:px-6 lg:px-24 -mt-6 md:-mt-12">
+        <div className="bg-white/95 dark:bg-[#06261d]/95 backdrop-blur-md rounded-2xl shadow-[0_10px_40px_-10px_rgba(223,158,71,0.15)] border border-gray-100 dark:border-primary-container/20 p-4 md:p-6 transition-colors duration-300">
+          <div className="flex flex-wrap lg:flex-nowrap gap-4 items-center">
+
             {/* Search */}
-            <div className="relative flex-1 w-full" style={{ position: 'relative', flex: '1 1 0%', width: '100%', minWidth: '200px' }}>
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" width="20" height="20" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
+            <div className="relative flex-1 w-full min-w-50">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-emerald-700/50" width="20" height="20" />
               <input
                 type="text"
                 placeholder="Tìm kiếm sản phẩm..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-12 pr-4 py-3.5 bg-gray-50/50 border border-gray-200 rounded-xl outline-none focus:border-[#DF9E47] focus:ring-1 focus:ring-[#DF9E47] transition-all text-sm"
-                style={{ width: '100%', padding: '0.875rem 1rem 0.875rem 3rem', backgroundColor: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '0.75rem', outline: 'none', fontSize: '0.875rem' }}
+                className="w-full pl-12 pr-4 py-3.5 bg-gray-50/50 dark:bg-[#031d16]/50 border border-gray-200 dark:border-primary-container/30 rounded-xl outline-none focus:border-[#DF9E47] focus:ring-1 focus:ring-[#DF9E47] transition-all text-sm text-gray-700 dark:text-emerald-50 placeholder:text-gray-400 dark:placeholder:text-emerald-800/40"
               />
             </div>
 
             {/* Brand Dropdown */}
-            <div className="relative w-full md:w-48 shrink-0" style={{ position: 'relative', width: '100%', minWidth: '150px' }}>
-              <select 
-                value={brand} 
+            <div className="relative w-full md:w-48 shrink-0 min-w-38">
+              <select
+                value={brand}
                 onChange={(e) => setBrand(e.target.value)}
-                className="w-full px-4 py-3.5 bg-gray-50/50 border border-gray-200 rounded-xl outline-none focus:border-[#DF9E47] appearance-none text-sm text-gray-700 cursor-pointer"
-                style={{ width: '100%', padding: '0.875rem 2.5rem 0.875rem 1rem', backgroundColor: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '0.75rem', outline: 'none', fontSize: '0.875rem', appearance: 'none', cursor: 'pointer' }}
+                className="w-full px-4 py-3.5 bg-gray-50/50 dark:bg-[#031d16]/50 border border-gray-200 dark:border-primary-container/30 rounded-xl outline-none focus:border-[#DF9E47] appearance-none text-sm text-gray-700 dark:text-emerald-50 cursor-pointer"
               >
-                <option value="all">Tất cả thương hiệu</option>
-                {brands.map((b) => <option value={b} key={b}>{b}</option>)}
+                <option value="all" className="bg-white dark:bg-[#06261d]">Tất cả thương hiệu</option>
+                {brands.map((b) => <option value={b} key={b} className="bg-white dark:bg-[#06261d]">{b}</option>)}
               </select>
-              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" width="16" height="16" style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', pointerEvents: 'none' }} />
+              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" width="16" height="16" />
             </div>
 
             {/* Category Dropdown */}
-            <div className="relative w-full md:w-48 shrink-0" style={{ position: 'relative', width: '100%', minWidth: '150px' }}>
-              <select 
-                value={category} 
+            <div className="relative w-full md:w-48 shrink-0 min-w-38">
+              <select
+                value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full px-4 py-3.5 bg-gray-50/50 border border-gray-200 rounded-xl outline-none focus:border-[#DF9E47] appearance-none text-sm text-gray-700 cursor-pointer"
-                style={{ width: '100%', padding: '0.875rem 2.5rem 0.875rem 1rem', backgroundColor: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '0.75rem', outline: 'none', fontSize: '0.875rem', appearance: 'none', cursor: 'pointer' }}
+                className="w-full px-4 py-3.5 bg-gray-50/50 dark:bg-[#031d16]/50 border border-gray-200 dark:border-primary-container/30 rounded-xl outline-none focus:border-[#DF9E47] appearance-none text-sm text-gray-700 dark:text-emerald-50 cursor-pointer"
               >
-                <option value="all">Tất cả danh mục</option>
-                {categories.map((c) => <option value={c} key={c}>{c}</option>)}
+                <option value="all" className="bg-white dark:bg-[#06261d]">Tất cả danh mục</option>
+                {categories.map((c) => <option value={c} key={c} className="bg-white dark:bg-[#06261d]">{c}</option>)}
               </select>
-              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" width="16" height="16" style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', pointerEvents: 'none' }} />
+              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" width="16" height="16" />
             </div>
 
             {/* Sort Dropdown */}
-            <div className="relative w-full md:w-48 shrink-0" style={{ position: 'relative', width: '100%', minWidth: '150px' }}>
-              <select 
-                value={sort} 
+            <div className="relative w-full md:w-48 shrink-0 min-w-38">
+              <select
+                value={sort}
                 onChange={(e) => setSort(e.target.value)}
-                className="w-full px-4 py-3.5 bg-gray-50/50 border border-gray-200 rounded-xl outline-none focus:border-[#DF9E47] appearance-none text-sm text-gray-700 cursor-pointer"
-                style={{ width: '100%', padding: '0.875rem 2.5rem 0.875rem 1rem', backgroundColor: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '0.75rem', outline: 'none', fontSize: '0.875rem', appearance: 'none', cursor: 'pointer' }}
+                className="w-full px-4 py-3.5 bg-gray-50/50 dark:bg-[#031d16]/50 border border-gray-200 dark:border-primary-container/30 rounded-xl outline-none focus:border-[#DF9E47] appearance-none text-sm text-gray-700 dark:text-emerald-50 cursor-pointer"
               >
-                <option value="default">Sắp xếp mặc định</option>
-                <option value="price-asc">Giá: Thấp đến Cao</option>
-                <option value="price-desc">Giá: Cao đến Thấp</option>
+                <option value="default" className="bg-white dark:bg-[#06261d]">Sắp xếp mặc định</option>
+                <option value="price-asc" className="bg-white dark:bg-[#06261d]">Giá: Thấp đến Cao</option>
+                <option value="price-desc" className="bg-white dark:bg-[#06261d]">Giá: Cao đến Thấp</option>
               </select>
-              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" width="16" height="16" style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', pointerEvents: 'none' }} />
+              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" width="16" height="16" />
             </div>
 
             {/* Reset Button */}
-            <button 
+            <button
               onClick={handleResetFilters}
-              className="w-full md:w-auto px-6 py-3.5 bg-[#001A12] text-[#DF9E47] border border-[#DF9E47]/30 hover:bg-[#002B1F] rounded-xl text-sm font-bold tracking-widest transition-colors flex items-center justify-center gap-2 shrink-0"
-              style={{ padding: '0.875rem 1.5rem', backgroundColor: '#001A12', color: '#DF9E47', border: '1px solid rgba(223,158,71,0.3)', borderRadius: '0.75rem', fontSize: '0.875rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
+              className="w-full md:w-auto px-6 py-3.5 bg-[#001A12] dark:bg-secondary text-[#DF9E47] dark:text-[#002B1F] border border-[#DF9E47]/30 hover:bg-[#002B1F] dark:hover:bg-secondary-container rounded-xl text-sm font-bold tracking-widest transition-colors flex items-center justify-center gap-2 shrink-0 whitespace-nowrap"
             >
               <RotateCcw width="16" height="16" />
               ĐẶT LẠI
@@ -242,42 +238,7 @@ export function ProductBrowserClient({
             </div>
 
             {/* PAGINATION CONTROLS */}
-            {totalPages > 1 && (
-              <div className="flex justify-center items-center gap-2">
-                <button
-                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
-                  className="w-10 h-10 rounded-lg flex items-center justify-center border border-gray-200 text-slate-600 hover:border-[#DF9E47] hover:text-[#A36B2B] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                  style={{ cursor: currentPage === 1 ? 'not-allowed' : 'pointer' }}
-                >
-                  ←
-                </button>
-                
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`w-10 h-10 rounded-lg font-semibold text-sm transition-all ${
-                      currentPage === page
-                        ? "bg-[#002B1F] text-[#DF9E47] border border-[#002B1F]"
-                        : "border border-gray-200 text-slate-600 hover:border-[#DF9E47] hover:text-[#A36B2B]"
-                    }`}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    {page}
-                  </button>
-                ))}
-
-                <button
-                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                  className="w-10 h-10 rounded-lg flex items-center justify-center border border-gray-200 text-slate-600 hover:border-[#DF9E47] hover:text-[#A36B2B] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                  style={{ cursor: currentPage === totalPages ? 'not-allowed' : 'pointer' }}
-                >
-                  →
-                </button>
-              </div>
-            )}
+            <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
           </>
         )}
       </section>

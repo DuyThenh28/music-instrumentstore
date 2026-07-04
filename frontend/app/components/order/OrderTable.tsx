@@ -1,6 +1,10 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
+import { useEffect, useState } from "react";
 import type { Order } from "../../../types/cart";
+import { useConfirm } from "../../context/ConfirmDialogContext";
+import { Pagination } from "../common/Pagination";
 
 interface OrderTableProps {
   orders: Order[];
@@ -8,10 +12,32 @@ interface OrderTableProps {
   onSearchChange: (val: string) => void;
   statusFilter: string;
   onStatusFilterChange: (val: string) => void;
-  onUpdateStatus: (orderId: string, newStatus: string) => void;
+  onUpdateStatus: (orderId: string, newStatus: string) => Promise<void>;
   onViewDetails: (order: Order) => void;
-  onDeleteOrder: (orderId: string) => void;
 }
+
+const ITEMS_PER_PAGE = 10;
+
+export const ORDER_STATUSES = ["Chờ xác nhận", "Chờ lấy đơn", "Chờ giao hàng", "Đánh giá", "Tạm dừng", "Đã hủy"];
+
+export const getStatusClasses = (status: string) => {
+  switch (status) {
+    case "Chờ xác nhận":
+      return "bg-amber-50 text-amber-700";
+    case "Chờ lấy đơn":
+      return "bg-blue-50 text-blue-700";
+    case "Chờ giao hàng":
+      return "bg-sky-50 text-sky-700";
+    case "Đánh giá":
+      return "bg-emerald-50 text-emerald-700";
+    case "Tạm dừng":
+      return "bg-gray-100 text-gray-500";
+    case "Đã hủy":
+      return "bg-rose-50 text-rose-600";
+    default:
+      return "bg-gray-100 text-gray-600";
+  }
+};
 
 export function OrderTable({
   orders,
@@ -21,44 +47,35 @@ export function OrderTable({
   onStatusFilterChange,
   onUpdateStatus,
   onViewDetails,
-  onDeleteOrder,
 }: OrderTableProps) {
+  const confirmAction = useConfirm();
+  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+
   const statuses = ["Tất cả", "Chờ xác nhận", "Chờ lấy đơn", "Chờ giao hàng", "Đánh giá", "Tạm dừng", "Đã hủy"];
 
-  // Filter orders by search and status tab
   const filteredOrders = orders.filter((order) => {
     const matchesSearch =
       order.id.toLowerCase().includes(search.toLowerCase()) ||
-      order.customer.name.toLowerCase().includes(search.toLowerCase()) ||
-      order.customer.phone.includes(search);
+      (order.customer?.name || "").toLowerCase().includes(search.toLowerCase()) ||
+      (order.customer?.phone || "").includes(search);
 
     const matchesStatus = statusFilter === "Tất cả" || order.status === statusFilter;
 
     return matchesSearch && matchesStatus;
   });
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Chờ xác nhận":
-        return { bg: "#FEF3C7", text: "#D97706" }; // Gold
-      case "Chờ lấy đơn":
-        return { bg: "#DBEAFE", text: "#2563EB" }; // Blue
-      case "Chờ giao hàng":
-        return { bg: "#E0F2FE", text: "#0284C7" }; // Light Blue
-      case "Đánh giá":
-        return { bg: "#D1FAE5", text: "#059669" }; // Emerald
-      case "Tạm dừng":
-        return { bg: "#F3F4F6", text: "#9CA3AF" }; // Gray
-      case "Đã hủy":
-        return { bg: "#FEE2E2", text: "#EF4444" }; // Red
-      default:
-        return { bg: "#F3F4F6", text: "#4B5563" }; // Gray
-    }
-  };
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter, orders.length]);
 
-  const formatPrice = (price: number) => {
-    return price.toLocaleString("vi-VN") + " ₫";
-  };
+  const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
+  const paginatedOrders = filteredOrders.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  const formatPrice = (price: number) => price.toLocaleString("vi-VN") + " ₫";
 
   const formatDate = (isoString: string) => {
     try {
@@ -75,34 +92,46 @@ export function OrderTable({
     }
   };
 
+  const handleStatusChange = async (orderId: string, newStatus: string) => {
+    setUpdatingOrderId(orderId);
+    await onUpdateStatus(orderId, newStatus);
+    setUpdatingOrderId(null);
+  };
+
+  const handleCancelOrder = async (order: Order) => {
+    const ok = await confirmAction({
+      message: `Bạn chắc chắn muốn hủy đơn hàng ${order.id}?`,
+      danger: true,
+    });
+    if (!ok) return;
+
+    setUpdatingOrderId(order.id);
+    await onUpdateStatus(order.id, "Đã hủy");
+    setUpdatingOrderId(null);
+  };
+
   return (
-    <div className="admin-table-container">
-      <div className="admin-search-bar" style={{ display: "flex", gap: "1rem", marginBottom: "1.5rem", flexWrap: "wrap", alignItems: "center" }}>
+    <div className="bg-white rounded-2xl border border-gray-100 p-6">
+      <div className="flex flex-wrap gap-4 items-center mb-6">
         <input
           type="text"
           placeholder="Tìm theo Mã đơn hàng, Tên khách hàng hoặc Số điện thoại..."
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          style={{ flex: 1, minWidth: "260px" }}
+          className="flex-1 min-w-64 py-2.5 px-4 bg-white border border-gray-200 rounded-xl text-sm text-slate-700 outline-none focus:border-[#002B1F] focus:shadow-[0_0_0_1px_#002B1F] transition-all"
         />
-        
-        <div style={{ display: "flex", gap: "0.5rem" }}>
+
+        <div className="flex flex-wrap gap-2">
           {statuses.map((tab) => (
             <button
               key={tab}
               type="button"
               onClick={() => onStatusFilterChange(tab)}
-              style={{
-                padding: "8px 16px",
-                fontSize: "13px",
-                fontWeight: "600",
-                borderRadius: "4px",
-                border: "1px solid var(--color-border-subtle)",
-                backgroundColor: statusFilter === tab ? "var(--color-primary-container)" : "white",
-                color: statusFilter === tab ? "white" : "var(--color-on-surface)",
-                cursor: "pointer",
-                transition: "all 0.2s ease"
-              }}
+              className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors ${
+                statusFilter === tab
+                  ? "bg-[#002B1F] text-white"
+                  : "bg-[#F3EFEA] text-slate-600 hover:bg-[#e9e2d8]"
+              }`}
             >
               {tab}
             </button>
@@ -111,93 +140,64 @@ export function OrderTable({
       </div>
 
       {filteredOrders.length === 0 ? (
-        <div className="admin-empty" style={{ backgroundColor: "var(--color-surface-cream)", borderRadius: "8px" }}>
+        <div className="text-center py-16 bg-[#F3EFEA] rounded-xl text-sm text-slate-500">
           Không tìm thấy đơn đặt hàng nào phù hợp.
         </div>
       ) : (
-        <div style={{ overflowX: "auto" }}>
-          <table className="admin-table">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm border-collapse">
             <thead>
-              <tr>
-                <th>Mã đơn hàng</th>
-                <th>Thời gian</th>
-                <th>Khách hàng</th>
-                <th>Sản phẩm</th>
-                <th>Tổng tiền</th>
-                <th>Trạng thái</th>
-                <th>Thao tác</th>
+              <tr className="bg-[#F3EFEA] border-b border-gray-200 text-[#002B1F] font-bold uppercase text-[11px] tracking-wider">
+                <th className="p-4">Mã đơn hàng</th>
+                <th className="p-4">Thời gian</th>
+                <th className="p-4">Khách hàng</th>
+                <th className="p-4">Sản phẩm</th>
+                <th className="p-4">Tổng tiền</th>
+                <th className="p-4">Trạng thái</th>
+                <th className="p-4 text-right">Thao tác</th>
               </tr>
             </thead>
-            <tbody>
-              {filteredOrders.map((order) => {
-                const statusColor = getStatusColor(order.status);
+            <tbody className="divide-y divide-gray-100">
+              {paginatedOrders.map((order) => {
+                const isUpdating = updatingOrderId === order.id;
                 return (
-                  <tr key={order.id}>
-                    <td style={{ fontFamily: "monospace", fontSize: "13px", fontWeight: "600" }}>
+                  <tr key={order.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="p-4 font-mono text-xs font-semibold text-slate-600">
                       {order.id.slice(0, 16)}...
                     </td>
-                    <td>{formatDate(order.createdAt)}</td>
-                    <td>
-                      <div style={{ fontWeight: "600" }}>{order.customer.name}</div>
-                      <div style={{ fontSize: "12px", color: "var(--color-on-surface-variant)" }}>
-                        {order.customer.phone}
+                    <td className="p-4 text-slate-600">{formatDate(order.createdAt)}</td>
+                    <td className="p-4">
+                      <div className="font-semibold text-[#002B1F]">{order.customer?.name || "Chưa cập nhật"}</div>
+                      <div className="text-xs text-slate-500 mt-0.5">{order.customer?.phone || "Chưa cập nhật"}</div>
+                    </td>
+                    <td className="p-4">
+                      <div className="max-w-64 truncate text-slate-600">
+                        {(order.products || []).map((p) => `${p.name} (x${p.quantity || 1})`).join(", ")}
                       </div>
                     </td>
-                    <td>
-                      <div style={{ maxWidth: "250px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {order.products.map((p) => `${p.name} (x${p.quantity || 1})`).join(", ")}
-                      </div>
+                    <td className="p-4 font-semibold text-[#A36B2B]">
+                      {formatPrice(order.totalPrice || 0)}
                     </td>
-                    <td style={{ fontWeight: "600", color: "var(--color-primary)" }}>
-                      {formatPrice(order.totalPrice)}
-                    </td>
-                    <td>
-                      <span
-                        style={{
-                          display: "inline-block",
-                          padding: "4px 10px",
-                          borderRadius: "4px",
-                          fontSize: "12px",
-                          fontWeight: "600",
-                          backgroundColor: statusColor.bg,
-                          color: statusColor.text,
-                        }}
-                      >
+                    <td className="p-4">
+                      <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-bold ${getStatusClasses(order.status)}`}>
                         {order.status}
                       </span>
                     </td>
-                    <td>
-                      <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                    <td className="p-4">
+                      <div className="flex gap-2 items-center justify-end flex-wrap">
                         <button
                           type="button"
-                          className="edit-btn"
                           onClick={() => onViewDetails(order)}
-                          style={{
-                            padding: "6px 12px",
-                            fontSize: "12px",
-                            fontWeight: "600",
-                            border: "1px solid var(--color-secondary)",
-                            borderRadius: "4px",
-                            backgroundColor: "transparent",
-                            color: "var(--color-secondary)",
-                            cursor: "pointer"
-                          }}
+                          className="text-xs font-bold border border-[#DF9E47] text-[#A36B2B] px-3 py-1.5 rounded-lg hover:bg-[#F3EFEA] transition-colors"
                         >
                           👁 Xem
                         </button>
-                        
+
                         <select
                           value={order.status}
-                          onChange={(e) => onUpdateStatus(order.id, e.target.value)}
-                          style={{
-                            padding: "5px 8px",
-                            fontSize: "12px",
-                            borderRadius: "4px",
-                            border: "1px solid var(--color-border-subtle)",
-                            backgroundColor: "white",
-                            cursor: "pointer",
-                            fontWeight: "500"
-                          }}
+                          onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                          disabled={isUpdating}
+                          className="text-xs font-medium py-1.5 px-2 rounded-lg border border-gray-200 bg-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <option value="Chờ xác nhận">Chờ xác nhận</option>
                           <option value="Chờ lấy đơn">Chờ lấy đơn</option>
@@ -207,23 +207,16 @@ export function OrderTable({
                           <option value="Đã hủy">Đã hủy</option>
                         </select>
 
-                        <button
-                          type="button"
-                          className="delete-btn"
-                          onClick={() => onDeleteOrder(order.id)}
-                          style={{
-                            padding: "6px 10px",
-                            fontSize: "12px",
-                            fontWeight: "600",
-                            border: "1px solid #DC2626",
-                            borderRadius: "4px",
-                            backgroundColor: "transparent",
-                            color: "#DC2626",
-                            cursor: "pointer"
-                          }}
-                        >
-                          🗑 Xóa
-                        </button>
+                        {order.status !== "Đã hủy" && (
+                          <button
+                            type="button"
+                            onClick={() => handleCancelOrder(order)}
+                            disabled={isUpdating}
+                            className="text-xs font-bold border border-rose-300 text-rose-600 px-3 py-1.5 rounded-lg hover:bg-rose-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isUpdating ? "..." : "✕ Hủy Đơn"}
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -231,6 +224,7 @@ export function OrderTable({
               })}
             </tbody>
           </table>
+          <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
         </div>
       )}
     </div>

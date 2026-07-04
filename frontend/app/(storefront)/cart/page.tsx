@@ -3,9 +3,10 @@
 import "../../components/common/AmplifyConfig";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { getCurrentUser, fetchUserAttributes } from "aws-amplify/auth";
 import { useToast } from "../../context/ToastContext";
+import { useConfirm } from "../../context/ConfirmDialogContext";
 
 import type { CartItem, Customer, Order } from "../../../types/cart";
 import { CartItemCard } from "../../components/cart/CartItemCard";
@@ -42,8 +43,20 @@ const createOrderTimestamp = () => ({
 export default function Cart() {
   const router = useRouter();
   const { showToast } = useToast();
+  const confirmAction = useConfirm();
+  // Start empty on both server and client so the first client render matches
+  // the server-rendered HTML; the real cart loads after mount to avoid a
+  // hydration mismatch when localStorage already has items.
   const [{ cart, selectedItems }, setCartState] =
-    useState<CartState>(getInitialCartState);
+    useState<CartState>({ cart: [], selectedItems: [] });
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCartState(getInitialCartState());
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
+
   const [showCheckout, setShowCheckout] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("COD");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -105,7 +118,7 @@ export default function Cart() {
     saveCart(newCart);
   };
 
-  const decreaseQuantity = (index: number) => {
+  const decreaseQuantity = async (index: number) => {
     const newCart = [...cart];
     const item = newCart[index];
 
@@ -114,7 +127,10 @@ export default function Cart() {
     if ((item.quantity ?? 1) > 1) {
       item.quantity = (item.quantity ?? 1) - 1;
     } else {
-      const ok = confirm("Bạn có muốn xóa sản phẩm này khỏi giỏ hàng không?");
+      const ok = await confirmAction({
+        message: "Bạn có muốn xóa sản phẩm này khỏi giỏ hàng không?",
+        danger: true,
+      });
       if (!ok) return;
       newCart.splice(index, 1);
     }
@@ -122,8 +138,11 @@ export default function Cart() {
     saveCart(newCart);
   };
 
-  const removeItem = (index: number) => {
-    const ok = confirm("Bạn chắc chắn muốn xóa sản phẩm này?");
+  const removeItem = async (index: number) => {
+    const ok = await confirmAction({
+      message: "Bạn chắc chắn muốn xóa sản phẩm này?",
+      danger: true,
+    });
     if (!ok) return;
 
     const newCart = [...cart];
@@ -131,8 +150,11 @@ export default function Cart() {
     saveCart(newCart);
   };
 
-  const clearCart = () => {
-    const ok = confirm("Bạn chắc chắn muốn xóa toàn bộ giỏ hàng?");
+  const clearCart = async () => {
+    const ok = await confirmAction({
+      message: "Bạn chắc chắn muốn xóa toàn bộ giỏ hàng?",
+      danger: true,
+    });
     if (!ok) return;
 
     saveCart([]);
@@ -256,24 +278,26 @@ export default function Cart() {
   };
 
   return (
-    <main className="cart-page">
-      <h1 className="cart-title">Giỏ Hàng Của Bạn</h1>
+    <main className="min-h-screen bg-surface-cream dark:bg-[#02140f] pt-16 md:pt-20 pb-20 px-4 md:px-6 lg:px-24 max-w-7xl mx-auto transition-colors duration-300">
+      <h1 className="font-serif text-3xl md:text-4xl text-primary mt-10 mb-8">Giỏ Hàng Của Bạn</h1>
 
       {cart.length === 0 ? (
-        <div className="empty-cart-box">
-          <div className="empty-cart-icon">🛒</div>
-          <h2>Giỏ hàng đang trống</h2>
-          <p>Hãy chọn thêm sản phẩm saxophone yêu thích của bạn.</p>
+        <div className="max-w-md mx-auto text-center bg-[#F3EFEA] dark:bg-[#06261d] border border-transparent dark:border-primary-container/20 rounded-2xl p-10 md:p-14 transition-colors duration-300">
+          <div className="text-5xl mb-4">🛒</div>
+          <h2 className="font-serif text-xl text-primary mb-2">Giỏ hàng đang trống</h2>
+          <p className="text-sm text-slate-600 dark:text-emerald-100/70 mb-6">Hãy chọn thêm sản phẩm saxophone yêu thích của bạn.</p>
 
           <Link href="/products">
-            <button className="continue-btn">Tiếp tục mua hàng</button>
+            <button className="bg-primary hover:bg-primary-container text-white dark:text-[#002B1F] dark:bg-secondary dark:hover:bg-secondary-container font-bold text-sm uppercase tracking-widest px-8 py-3.5 rounded-xl transition-colors cursor-pointer">
+              Tiếp tục mua hàng
+            </button>
           </Link>
         </div>
       ) : (
-        <div className="cart-layout">
-          <section className="cart-list">
-            <div className="cart-shop-header">
-              <label className="select-all-box">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+          <section className="lg:col-span-2 flex flex-col gap-4">
+            <div className="flex justify-between items-center bg-[#F3EFEA] dark:bg-[#031d16] border border-transparent dark:border-primary-container/20 rounded-xl px-4 py-3 transition-colors">
+              <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={
@@ -281,11 +305,12 @@ export default function Cart() {
                     selectedItems.length === cart.length
                   }
                   onChange={toggleSelectAll}
+                  className="w-4 h-4 accent-[#002B1F] dark:accent-secondary"
                 />
-                <span>🛍️ Nhóm TTTN Music</span>
+                <span className="text-sm font-semibold text-primary">🛍️ Nhóm TTTN Music</span>
               </label>
 
-              <strong>{totalItems} sản phẩm đã chọn</strong>
+              <strong className="text-sm text-slate-600 dark:text-emerald-100/75">{totalItems} sản phẩm đã chọn</strong>
             </div>
 
             {cart.map((item, index) => (

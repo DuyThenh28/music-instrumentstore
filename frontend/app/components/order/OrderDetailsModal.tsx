@@ -11,9 +11,7 @@ interface OrderDetailsModalProps {
 export function OrderDetailsModal({ isOpen, order, onClose }: OrderDetailsModalProps) {
   if (!isOpen || !order) return null;
 
-  const formatPrice = (price: number) => {
-    return price.toLocaleString("vi-VN") + " ₫";
-  };
+  const formatPrice = (price: number) => price.toLocaleString("vi-VN") + " ₫";
 
   const formatDate = (isoString: string) => {
     try {
@@ -24,7 +22,7 @@ export function OrderDetailsModal({ isOpen, order, onClose }: OrderDetailsModalP
         day: "2-digit",
         hour: "2-digit",
         minute: "2-digit",
-        second: "2-digit"
+        second: "2-digit",
       });
     } catch {
       return isoString;
@@ -33,136 +31,68 @@ export function OrderDetailsModal({ isOpen, order, onClose }: OrderDetailsModalP
 
   return (
     <div
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        width: "100%",
-        height: "100%",
-        backgroundColor: "rgba(0, 0, 0, 0.5)",
-        backdropFilter: "blur(4px)",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        zIndex: 1000,
-        fontFamily: "var(--font-sans)",
-      }}
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
       onClick={onClose}
     >
       <div
-        style={{
-          backgroundColor: "#FAF9F6", // Cream background
-          width: "90%",
-          maxWidth: "750px",
-          maxHeight: "90vh",
-          borderRadius: "8px",
-          border: "1px solid var(--color-border-subtle)",
-          boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
-          overflowY: "auto",
-          display: "flex",
-          flexDirection: "column",
-        }}
+        className="bg-[#FAF9F6] w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl border border-gray-100 flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div
-          style={{
-            padding: "1.5rem 2rem",
-            borderBottom: "1px solid var(--color-border-subtle)",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            backgroundColor: "var(--color-surface-cream)",
-          }}
-        >
+        <div className="flex justify-between items-center px-6 md:px-8 py-6 border-b border-gray-100 bg-[#F3EFEA]">
           <div>
-            <h3 style={{ margin: 0, fontSize: "18px", color: "var(--color-primary)", fontFamily: "var(--font-serif)", fontWeight: "bold" }}>
-              Chi Tiết Đơn Hàng
-            </h3>
-            <span style={{ fontSize: "12px", fontFamily: "monospace", color: "var(--color-on-surface-variant)" }}>
-              ID: {order.id}
-            </span>
+            <h3 className="font-serif text-lg font-bold text-[#002B1F]">Chi Tiết Đơn Hàng</h3>
+            <span className="text-xs font-mono text-slate-500">ID: {order.id}</span>
           </div>
           <button
             type="button"
             onClick={onClose}
-            style={{
-              background: "none",
-              border: "none",
-              fontSize: "24px",
-              cursor: "pointer",
-              color: "var(--color-on-surface-variant)",
-            }}
+            className="text-2xl text-slate-400 hover:text-slate-600 transition-colors leading-none"
           >
             &times;
           </button>
         </div>
 
         {/* Content */}
-        <div style={{ padding: "2rem" }}>
+        <div className="p-6 md:p-8">
           {/* Status and Method */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-              gap: "1.5rem",
-              marginBottom: "2rem",
-              padding: "1.25rem",
-              backgroundColor: "rgba(6, 78, 59, 0.03)",
-              borderRadius: "6px",
-              border: "1px dashed var(--color-border-subtle)"
-            }}
-          >
+          <div className="grid gap-6 mb-8 p-5 bg-[#002B1F]/[0.03] rounded-xl border border-dashed border-gray-200" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
             <div>
-              <span style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--color-on-surface-variant)" }}>
-                Trạng thái hiện tại
-              </span>
-              <div style={{ fontWeight: "700", color: "var(--color-primary)", marginTop: "4px" }}>
-                {order.status}
-              </div>
+              <span className="text-xs uppercase tracking-wider text-slate-500">Trạng thái hiện tại</span>
+              <div className="font-bold text-[#002B1F] mt-1">{order.status}</div>
             </div>
             <div>
-              <span style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--color-on-surface-variant)" }}>
-                Phương thức thanh toán
-              </span>
-              <div style={{ fontWeight: "600", marginTop: "4px" }}>
-                {order.paymentMethod}
-              </div>
+              <span className="text-xs uppercase tracking-wider text-slate-500">Phương thức thanh toán</span>
+              <div className="font-semibold mt-1 text-slate-700">{order.paymentMethod}</div>
             </div>
             <div>
-              <span style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--color-on-surface-variant)" }}>
-                Thời gian đặt hàng
-              </span>
-              <div style={{ fontWeight: "500", marginTop: "4px" }}>
-                {formatDate(order.createdAt)}
-              </div>
+              <span className="text-xs uppercase tracking-wider text-slate-500">Thời gian đặt hàng</span>
+              <div className="font-medium mt-1 text-slate-700">{formatDate(order.createdAt)}</div>
             </div>
           </div>
 
           {/* Customer Grid */}
-          <div style={{ marginBottom: "2rem" }}>
-            <h4 style={{ margin: "0 0 1rem 0", fontSize: "15px", color: "var(--color-primary)", borderBottom: "1px solid var(--color-border-subtle)", paddingBottom: "0.5rem" }}>
+          <div className="mb-8">
+            <h4 className="text-sm font-bold text-[#002B1F] border-b border-gray-100 pb-2 mb-4">
               Thông Tin Giao Hàng
             </h4>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <span style={{ fontSize: "12px", color: "var(--color-on-surface-variant)" }}>Họ và Tên</span>
-                <p style={{ margin: "4px 0 0 0", fontWeight: "600" }}>{order.customer.name}</p>
+                <span className="text-xs text-slate-500">Họ và Tên</span>
+                <p className="font-semibold text-slate-800 mt-1">{order.customer?.name || "Chưa cập nhật"}</p>
               </div>
               <div>
-                <span style={{ fontSize: "12px", color: "var(--color-on-surface-variant)" }}>Số Điện Thoại</span>
-                <p style={{ margin: "4px 0 0 0", fontWeight: "600" }}>{order.customer.phone}</p>
+                <span className="text-xs text-slate-500">Số Điện Thoại</span>
+                <p className="font-semibold text-slate-800 mt-1">{order.customer?.phone || "Chưa cập nhật"}</p>
               </div>
-              <div style={{ gridColumn: "span 2" }}>
-                <span style={{ fontSize: "12px", color: "var(--color-on-surface-variant)" }}>Địa Chỉ Nhận Hàng</span>
-                <p style={{ margin: "4px 0 0 0", fontWeight: "500", lineHeight: "1.5" }}>{order.customer.address}</p>
+              <div className="sm:col-span-2">
+                <span className="text-xs text-slate-500">Địa Chỉ Nhận Hàng</span>
+                <p className="font-medium text-slate-700 leading-relaxed mt-1">{order.customer?.address || "Chưa cập nhật"}</p>
               </div>
-              {order.customer.note && (
-                <div style={{ gridColumn: "span 2" }}>
-                  <span style={{ fontSize: "12px", color: "var(--color-on-surface-variant)" }}>Ghi chú đơn hàng</span>
-                  <p style={{ margin: "4px 0 0 0", fontStyle: "italic", color: "var(--color-on-surface-variant)", lineHeight: "1.5" }}>
-                    &ldquo;{order.customer.note}&rdquo;
-                  </p>
+              {order.customer?.note && (
+                <div className="sm:col-span-2">
+                  <span className="text-xs text-slate-500">Ghi chú đơn hàng</span>
+                  <p className="italic text-slate-500 leading-relaxed mt-1">&ldquo;{order.customer.note}&rdquo;</p>
                 </div>
               )}
             </div>
@@ -170,56 +100,47 @@ export function OrderDetailsModal({ isOpen, order, onClose }: OrderDetailsModalP
 
           {/* Product Items */}
           <div>
-            <h4 style={{ margin: "0 0 1rem 0", fontSize: "15px", color: "var(--color-primary)", borderBottom: "1px solid var(--color-border-subtle)", paddingBottom: "0.5rem" }}>
-              Danh Sách Sản Phẩm ({order.totalItems})
+            <h4 className="text-sm font-bold text-[#002B1F] border-b border-gray-100 pb-2 mb-4">
+              Danh Sách Sản Phẩm ({order.totalItems || 0})
             </h4>
-            <div style={{ border: "1px solid var(--color-border-subtle)", borderRadius: "6px", overflow: "hidden" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <div className="border border-gray-100 rounded-xl overflow-hidden">
+              <table className="w-full border-collapse text-sm">
                 <thead>
-                  <tr style={{ backgroundColor: "var(--color-surface-cream)", borderBottom: "1px solid var(--color-border-subtle)" }}>
-                    <th style={{ padding: "10px 15px", textAlign: "left", fontSize: "12px", fontWeight: "600", textTransform: "uppercase", color: "var(--color-primary)" }}>Sản phẩm</th>
-                    <th style={{ padding: "10px 15px", textAlign: "right", fontSize: "12px", fontWeight: "600", textTransform: "uppercase", color: "var(--color-primary)" }}>Đơn giá</th>
-                    <th style={{ padding: "10px 15px", textAlign: "center", fontSize: "12px", fontWeight: "600", textTransform: "uppercase", color: "var(--color-primary)" }}>Số lượng</th>
-                    <th style={{ padding: "10px 15px", textAlign: "right", fontSize: "12px", fontWeight: "600", textTransform: "uppercase", color: "var(--color-primary)" }}>Thành tiền</th>
+                  <tr className="bg-[#F3EFEA] border-b border-gray-100">
+                    <th className="p-3 text-left text-xs font-bold uppercase text-[#002B1F]">Sản phẩm</th>
+                    <th className="p-3 text-right text-xs font-bold uppercase text-[#002B1F]">Đơn giá</th>
+                    <th className="p-3 text-center text-xs font-bold uppercase text-[#002B1F]">Số lượng</th>
+                    <th className="p-3 text-right text-xs font-bold uppercase text-[#002B1F]">Thành tiền</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {order.products.map((item) => {
+                  {(order.products || []).map((item) => {
                     const priceNum = parseFloat(String(item.price).replace(/,/g, ""));
                     const totalNum = priceNum * (item.quantity || 1);
                     return (
-                      <tr key={item.id} style={{ borderBottom: "1px solid var(--color-border-subtle)" }}>
-                        <td style={{ padding: "12px 15px", fontSize: "13px" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <tr key={item.id} className="border-b border-gray-100">
+                        <td className="p-3">
+                          <div className="flex items-center gap-2.5">
                             {item.image && (
+                              // eslint-disable-next-line @next/next/no-img-element
                               <img
                                 src={item.image}
                                 alt={item.name}
-                                style={{ width: "40px", height: "40px", objectFit: "contain", backgroundColor: "white", borderRadius: "4px", border: "1px solid var(--color-border-subtle)" }}
+                                className="w-10 h-10 object-contain bg-white rounded border border-gray-100"
                               />
                             )}
-                            <span style={{ fontWeight: "600" }}>{item.name}</span>
+                            <span className="font-semibold text-slate-800">{item.name}</span>
                           </div>
                         </td>
-                        <td style={{ padding: "12px 15px", textAlign: "right", fontSize: "13px" }}>
-                          {formatPrice(priceNum)}
-                        </td>
-                        <td style={{ padding: "12px 15px", textAlign: "center", fontSize: "13px", fontWeight: "600" }}>
-                          {item.quantity || 1}
-                        </td>
-                        <td style={{ padding: "12px 15px", textAlign: "right", fontSize: "13px", fontWeight: "600", color: "var(--color-primary)" }}>
-                          {formatPrice(totalNum)}
-                        </td>
+                        <td className="p-3 text-right text-slate-600">{formatPrice(priceNum)}</td>
+                        <td className="p-3 text-center font-semibold text-slate-700">{item.quantity || 1}</td>
+                        <td className="p-3 text-right font-semibold text-[#002B1F]">{formatPrice(totalNum)}</td>
                       </tr>
                     );
                   })}
-                  <tr style={{ backgroundColor: "rgba(6, 78, 59, 0.02)", fontWeight: "bold" }}>
-                    <td colSpan={3} style={{ padding: "15px", textAlign: "right", fontSize: "14px", color: "var(--color-on-surface)" }}>
-                      TỔNG THANH TOÁN:
-                    </td>
-                    <td style={{ padding: "15px", textAlign: "right", fontSize: "16px", color: "var(--color-primary)" }}>
-                      {formatPrice(order.totalPrice)}
-                    </td>
+                  <tr className="bg-[#002B1F]/[0.02] font-bold">
+                    <td colSpan={3} className="p-4 text-right text-slate-700">TỔNG THANH TOÁN:</td>
+                    <td className="p-4 text-right text-[#002B1F]">{formatPrice(order.totalPrice || 0)}</td>
                   </tr>
                 </tbody>
               </table>
@@ -228,28 +149,11 @@ export function OrderDetailsModal({ isOpen, order, onClose }: OrderDetailsModalP
         </div>
 
         {/* Footer */}
-        <div
-          style={{
-            padding: "1.25rem 2rem",
-            borderTop: "1px solid var(--color-border-subtle)",
-            backgroundColor: "var(--color-surface-cream)",
-            display: "flex",
-            justifyContent: "flex-end",
-          }}
-        >
+        <div className="px-6 md:px-8 py-5 border-t border-gray-100 bg-[#F3EFEA] flex justify-end">
           <button
             type="button"
             onClick={onClose}
-            style={{
-              padding: "8px 20px",
-              fontSize: "13px",
-              fontWeight: "600",
-              backgroundColor: "var(--color-primary-container)",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor: "pointer",
-            }}
+            className="bg-[#002B1F] hover:bg-[#054030] text-white text-sm font-semibold px-6 py-2.5 rounded-xl transition-colors"
           >
             Đóng
           </button>

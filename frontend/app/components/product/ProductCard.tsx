@@ -59,14 +59,14 @@ export function ProductCard({ product }: ProductCardProps) {
 
   return (
     <article 
-      className="relative flex flex-col bg-white rounded-2xl overflow-hidden transition-all duration-300 border border-gray-100 hover:border-[#DF9E47]/30 group hover-float"
+      className="relative flex flex-col bg-white dark:bg-[#06261d] rounded-2xl overflow-hidden transition-all duration-300 border border-gray-100 dark:border-primary-container/20 hover:border-[#DF9E47]/30 hover:-translate-y-1 group"
       style={{ boxShadow: isHovered ? '0 10px 40px -10px rgba(223,158,71,0.15)' : 'none' }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <Link 
         href={`/product/${product.id}`} 
-        className="block relative w-full bg-[#F3EFEA] overflow-hidden"
+        className="block relative w-full bg-[#F3EFEA] dark:bg-[#031d16] overflow-hidden"
         style={{ paddingTop: '85%' }}
       >
         <div className="absolute inset-6 md:inset-8">
@@ -80,21 +80,22 @@ export function ProductCard({ product }: ProductCardProps) {
         </div>
         
         {/* Wishlist Heart */}
-        <button 
+        <button
           onClick={handleWishlist}
+          aria-label={isWishlisted ? "Xóa khỏi danh sách yêu thích" : "Thêm vào danh sách yêu thích"}
           className="absolute top-4 right-4 z-10 flex items-center justify-center transition-colors"
         >
           <Heart width="20" height="20" fill={isWishlisted ? "#A36B2B" : "none"} stroke="#A36B2B" strokeWidth={1.5} />
         </button>
       </Link>
 
-      <div className="p-5 flex flex-col flex-grow">
+      <div className="p-5 flex flex-col grow">
         <p className="text-[10px] font-bold text-[#A36B2B] tracking-widest uppercase mb-1.5">
           {product.brand}
         </p>
 
         <Link href={`/product/${product.id}`} className="block">
-          <h3 className="font-serif text-[#002B1F] text-lg leading-snug font-semibold line-clamp-2 mb-2 group-hover:text-[#A36B2B] transition-colors" style={{ minHeight: '3.5rem' }}>
+          <h3 className="font-serif text-primary text-lg leading-snug font-semibold line-clamp-2 mb-2 group-hover:text-[#A36B2B] transition-colors" style={{ minHeight: '3.5rem' }}>
             {product.name}
           </h3>
         </Link>
@@ -107,7 +108,7 @@ export function ProductCard({ product }: ProductCardProps) {
             ))}
             <Star width="12" height="12" fill="currentColor" stroke="none" className="opacity-50" />
           </div>
-          <span className="text-[11px] text-gray-500">({mockReviewCount} đánh giá)</span>
+          <span className="text-[11px] text-gray-500 dark:text-emerald-100/50">({mockReviewCount} đánh giá)</span>
         </div>
 
         <div className="mt-auto flex items-end justify-between">
@@ -115,11 +116,12 @@ export function ProductCard({ product }: ProductCardProps) {
             {currencyFormatter.format(product.price)}
           </p>
           
-          <button 
-            type="button" 
+          <button
+            type="button"
             onClick={handleAddToCart}
-            className="w-10 h-10 rounded-lg bg-[#002B1F] flex items-center justify-center text-white hover:bg-[#054030] transition-colors"
+            className="w-10 h-10 rounded-lg bg-primary text-white hover:bg-primary-container dark:bg-secondary dark:text-[#002B1F] dark:hover:bg-secondary-container transition-colors flex items-center justify-center"
             title="Thêm vào giỏ hàng"
+            aria-label="Thêm vào giỏ hàng"
           >
             <ShoppingCart width="18" height="18" />
           </button>

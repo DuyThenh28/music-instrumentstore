@@ -1,6 +1,8 @@
 import "./globals.css";
 import { CartProvider } from "./context/CartContext";
 import { ToastProvider } from "./context/ToastContext";
+import { ConfirmDialogProvider } from "./context/ConfirmDialogContext";
+import { ThemeProvider } from "./context/ThemeContext";
 import { Playfair_Display, Inter } from "next/font/google";
 import AmplifyConfig from "./components/common/AmplifyConfig";
 
@@ -28,11 +30,15 @@ export default function RootLayout({
 }) {
   return (
     <html lang="vi">
-      <body className={`${inter.variable} ${playfair.variable}`}>
+      <body className={`${inter.variable} ${playfair.variable} bg-surface-cream text-primary transition-colors duration-300`}>
         <AmplifyConfig>
-          <ToastProvider>
-            <CartProvider>{children}</CartProvider>
-          </ToastProvider>
+          <ThemeProvider>
+            <ToastProvider>
+              <ConfirmDialogProvider>
+                <CartProvider>{children}</CartProvider>
+              </ConfirmDialogProvider>
+            </ToastProvider>
+          </ThemeProvider>
         </AmplifyConfig>
       </body>
     </html>

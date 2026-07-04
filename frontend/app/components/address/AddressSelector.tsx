@@ -177,14 +177,17 @@ export default function AddressSelector({
     handleAddressChange(selectedProvince, selectedDistrict, selectedWard, text);
   };
 
+  const selectClasses =
+    "w-full py-3 px-4 bg-white border border-gray-200 rounded-xl text-sm text-slate-700 transition-all outline-none focus:border-[#002B1F] focus:shadow-[0_0_0_1px_#002B1F] disabled:opacity-60 disabled:cursor-not-allowed";
+
   return (
-    <div className="address-selector-container">
-      <div className="address-dropdowns-grid">
+    <div className="space-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <select
           value={selectedProvince}
           onChange={onProvinceSelect}
           disabled={disabled || loadingProvinces}
-          className="address-select"
+          className={selectClasses}
         >
           <option value="">-- Tỉnh/Thành phố --</option>
           {provinces.map((p) => (
@@ -198,7 +201,7 @@ export default function AddressSelector({
           value={selectedDistrict}
           onChange={onDistrictSelect}
           disabled={disabled || !selectedProvince || loadingDistricts}
-          className="address-select"
+          className={selectClasses}
         >
           <option value="">-- Quận/Huyện --</option>
           {districts.map((d) => (
@@ -212,7 +215,7 @@ export default function AddressSelector({
           value={selectedWard}
           onChange={onWardSelect}
           disabled={disabled || !selectedDistrict || loadingWards}
-          className="address-select"
+          className={selectClasses}
         >
           <option value="">-- Phường/Xã --</option>
           {wards.map((w) => (
@@ -229,8 +232,7 @@ export default function AddressSelector({
         value={detailedAddress}
         onChange={onDetailChange}
         disabled={disabled}
-        className="address-detail-input"
-        style={{ marginBottom: 0 }}
+        className="w-full py-3 px-4 bg-white border border-gray-200 rounded-xl text-sm text-slate-700 transition-all outline-none focus:border-[#002B1F] focus:shadow-[0_0_0_1px_#002B1F] disabled:opacity-60 disabled:cursor-not-allowed"
       />
     </div>
   );

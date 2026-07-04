@@ -109,8 +109,8 @@ export default function OrdersPage() {
   );
 
   return (
-    <main className="orders-page">
-      <h1 className="orders-title">Đơn Đã Mua</h1>
+    <main className="min-h-screen bg-white pt-16 md:pt-20 pb-20 px-4 md:px-6 lg:px-24 max-w-5xl mx-auto">
+      <h1 className="font-serif text-3xl md:text-4xl text-[#002B1F] mt-10 mb-8">Đơn Đã Mua</h1>
 
       <OrderTabs
         tabs={tabs}
@@ -123,7 +123,7 @@ export default function OrdersPage() {
       ) : filteredOrders.length === 0 ? (
         <EmptyOrders />
       ) : (
-        <section className="orders-list">
+        <section>
           {filteredOrders.map((order) => (
             <OrderCard key={order.id} order={order} />
           ))}
