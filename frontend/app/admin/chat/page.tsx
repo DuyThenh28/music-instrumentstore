@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { fetchAuthSession } from "aws-amplify/auth";
 import MusicLoading from "../../components/common/MusicLoading";
 import { Send, User, CheckCircle2, AlertCircle, XCircle, Download, Paperclip } from "lucide-react";
+import { useToast } from "../../context/ToastContext";
 
 interface ChatSession {
   sessionId: string;
@@ -33,6 +34,7 @@ const formatSize = (bytes: number) => {
 };
 
 export default function AdminChatPage() {
+  const { showToast } = useToast();
   const [waitingSessions, setWaitingSessions] = useState<ChatSession[]>([]);
   const [activeSessions, setActiveSessions] = useState<ChatSession[]>([]);
   const [selectedSession, setSelectedSession] = useState<ChatSession | null>(null);
@@ -146,6 +148,7 @@ export default function AdminChatPage() {
       });
 
       if (res.ok) {
+        showToast(`Đã tiếp nhận hỗ trợ cuộc trò chuyện của ${session.userName}!`, "success");
         await fetchSessions();
         setSelectedSession({
           ...session,
@@ -156,6 +159,7 @@ export default function AdminChatPage() {
       }
     } catch (err) {
       console.error("Failed to assign session:", err);
+      showToast("Có lỗi xảy ra khi tiếp nhận cuộc trò chuyện.", "error");
     } finally {
       setIsLoading(false);
     }
@@ -175,6 +179,7 @@ export default function AdminChatPage() {
       });
 
       if (res.ok) {
+        showToast("Đã đóng phiên trò chuyện và lưu file thành công!", "success");
         // Tải xuống bản sao lưu trước khi đóng phiên (Tùy chọn)
         handleDownloadBackup();
         await fetchSessions();
@@ -182,6 +187,7 @@ export default function AdminChatPage() {
       }
     } catch (err) {
       console.error("Failed to close session:", err);
+      showToast("Có lỗi xảy ra khi kết thúc cuộc trò chuyện.", "error");
     } finally {
       setIsLoading(false);
     }
@@ -211,9 +217,12 @@ export default function AdminChatPage() {
 
       if (res.ok) {
         await fetchHistory(selectedSession.sessionId);
+      } else {
+        showToast("Không thể gửi tin nhắn. Vui lòng kiểm tra lại kết nối.", "error");
       }
     } catch (err) {
       console.error("Failed to send staff message:", err);
+      showToast("Không thể gửi tin nhắn. Vui lòng kiểm tra lại kết nối.", "error");
     } finally {
       setIsSending(false);
     }
@@ -225,7 +234,7 @@ export default function AdminChatPage() {
     if (!file || !selectedSession || !staffInfo) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      alert("Kích thước file tối đa cho phép là 5MB.");
+      showToast("Kích thước file tối đa cho phép là 5MB.", "warning");
       return;
     }
 
@@ -262,11 +271,14 @@ export default function AdminChatPage() {
       });
 
       if (res.ok) {
+        showToast(`Đã gửi đính kèm file ${file.name} thành công!`, "success");
         await fetchHistory(selectedSession.sessionId);
+      } else {
+        showToast("Gửi tin nhắn chứa file thất bại.", "error");
       }
     } catch (err: any) {
       console.error("Staff upload file error:", err);
-      alert(err.message || "Không thể gửi file lúc này.");
+      showToast(err.message || "Không thể gửi file lúc này.", "error");
     } finally {
       setIsSending(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -317,6 +329,7 @@ export default function AdminChatPage() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+    showToast("Đã tải xuống file sao lưu hội thoại!", "info");
   };
 
   const renderMessageContent = (text: string) => {

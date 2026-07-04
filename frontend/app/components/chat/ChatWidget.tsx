@@ -4,6 +4,7 @@ import "../common/AmplifyConfig";
 import { useState, useRef, useEffect } from "react";
 import { fetchAuthSession } from "aws-amplify/auth";
 import { MessageSquare, Send, X, ArrowUpRight, Paperclip } from "lucide-react";
+import { useToast } from "../../context/ToastContext";
 
 interface Message {
   text: string;
@@ -21,6 +22,7 @@ const formatSize = (bytes: number) => {
 };
 
 export default function ChatWidget() {
+  const { showToast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     { text: "Chào bạn! Tôi là trợ lý ảo AI của Music Store. Tôi có thể giúp gì cho bạn hôm nay?", sender: "bot", senderName: "Trợ lý ảo" }
@@ -119,6 +121,10 @@ export default function ChatWidget() {
         if (res.ok) {
           const data = await res.json();
           if (data.session) {
+            // Hiển thị thông báo khi nhân viên đóng phiên
+            if (sessionStatus === "HUMAN_CONNECTED" && data.session.status === "CLOSED") {
+              showToast("Nhân viên hỗ trợ đã kết thúc cuộc trò chuyện này.", "warning");
+            }
             setSessionStatus(data.session.status);
             setAssignedStaff(data.session.assignedStaffName || "");
           }
@@ -154,11 +160,15 @@ export default function ChatWidget() {
         body: JSON.stringify({ sessionId }),
       });
       if (res.ok) {
+        showToast("Đã gửi yêu cầu kết nối với nhân viên hỗ trợ.", "info");
         setSessionStatus("HUMAN_WAITING");
         await fetchHistory();
+      } else {
+        showToast("Gửi yêu cầu hỗ trợ thất bại. Vui lòng thử lại sau.", "error");
       }
     } catch (err) {
       console.error("Request human connection error:", err);
+      showToast("Mất kết nối máy chủ.", "error");
     } finally {
       setIsLoading(false);
     }
@@ -174,11 +184,15 @@ export default function ChatWidget() {
         body: JSON.stringify({ sessionId }),
       });
       if (res.ok) {
+        showToast("Đã kết nối lại với trợ lý ảo AI.", "success");
         setSessionStatus("BOT");
         await fetchHistory();
+      } else {
+        showToast("Không thể kết nối với AI lúc này.", "error");
       }
     } catch (err) {
       console.error("Restart AI error:", err);
+      showToast("Mất kết nối máy chủ.", "error");
     } finally {
       setIsLoading(false);
     }
@@ -231,6 +245,7 @@ export default function ChatWidget() {
       await fetchHistory();
     } catch (error) {
       console.error("Send message error:", error);
+      showToast("Mất kết nối mạng, vui lòng thử lại.", "error");
       setMessages((prev) => [
         ...prev,
         { text: "Đang mất kết nối Internet, vui lòng thử lại.", sender: "system" }
@@ -247,7 +262,7 @@ export default function ChatWidget() {
 
     // Giới hạn 5MB
     if (file.size > 5 * 1024 * 1024) {
-      alert("Kích thước file tối đa cho phép là 5MB.");
+      showToast("Kích thước file tối đa cho phép là 5MB.", "warning");
       return;
     }
 
@@ -304,10 +319,11 @@ export default function ChatWidget() {
         });
       }
       
+      showToast(`Đã gửi đính kèm file ${file.name} thành công!`, "success");
       await fetchHistory();
     } catch (err: any) {
       console.error("File upload sending error:", err);
-      alert(err.message || "Không thể gửi file đính kèm.");
+      showToast(err.message || "Không thể gửi file đính kèm.", "error");
     } finally {
       setIsLoading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
