@@ -1,0 +1,13 @@
+{
+  "name": "@music-store/auth-triggers",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "build": "echo \"built via root build:lambdas (esbuild)\"",
+    "test": "echo \"No tests configured for auth-triggers\""
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.152"
+  }
+}

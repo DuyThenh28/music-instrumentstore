@@ -1,6 +1,8 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as logs from 'aws-cdk-lib/aws-logs';
 
 export class AuthStack extends cdk.Stack {
   public readonly userPool: cognito.UserPool;
@@ -24,6 +26,15 @@ export class AuthStack extends cdk.Stack {
       },
       removalPolicy: cdk.RemovalPolicy.DESTROY, // Lưu ý: Đổi thành RETAIN khi lên Production thực tế
     });
+
+    // 1b. Cognito Lambda Trigger: tuỳ biến nội dung email OTP (đăng ký / quên mật khẩu)
+    const customMessageFn = new lambda.Function(this, 'CustomMessageTriggerFunction', {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: 'index.handler',
+      code: lambda.Code.fromAsset('../services/auth-triggers'),
+      logRetention: logs.RetentionDays.ONE_WEEK,
+    });
+    this.userPool.addTrigger(cognito.UserPoolOperation.CUSTOM_MESSAGE, customMessageFn);
 
     // 2. Tạo App Client cho Next.js Frontend
     this.userPoolClient = new cognito.UserPoolClient(this, 'MusicStoreUserPoolClient', {

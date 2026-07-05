@@ -1,5 +1,5 @@
 import type { APIGatewayProxyHandler, APIGatewayProxyResult } from "aws-lambda";
-import { createHmac, timingSafeEqual } from "crypto";
+import { createHmac, timingSafeEqual, randomUUID } from "crypto";
 import {
   EventBridgeClient,
   PutEventsCommand,
@@ -148,6 +148,7 @@ const processOrderPaymentSuccess = async (orderId: string, paymentMethod: string
   }
 
   // 2. Release inventory reservation (reduce reserved, since stock has already been deducted at checkout)
+  let order: Record<string, any> | undefined;
   try {
     const getOrderResult = await ddbDocClient.send(
       new GetCommand({
@@ -158,8 +159,8 @@ const processOrderPaymentSuccess = async (orderId: string, paymentMethod: string
         },
       })
     );
-    
-    const order = getOrderResult.Item;
+
+    order = getOrderResult.Item;
     if (order && Array.isArray(order.items)) {
       for (const item of order.items) {
         const productId = String(item.productId);
@@ -198,8 +199,12 @@ const processOrderPaymentSuccess = async (orderId: string, paymentMethod: string
               Source: "com.musicstore.payment",
               DetailType: "PaymentSucceeded",
               Detail: JSON.stringify({
+                eventId: randomUUID(),
+                version: "1.0",
                 id: orderId,
-                amount: rawPayload.amount ?? rawPayload.amountPaid ?? 0,
+                amount: rawPayload.amount ?? rawPayload.amountPaid ?? order?.totalPrice ?? 0,
+                email: order?.email,
+                customer: order?.customer,
                 metadata: {
                   orderId,
                   paymentMethod,

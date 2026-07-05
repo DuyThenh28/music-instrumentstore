@@ -62,6 +62,22 @@ export class BackendStack extends cdk.Stack {
       },
     });
 
+    // Campaign Queue tách riêng khỏi Notification Queue để gửi hàng loạt (marketing) không làm
+    // nghẽn/chậm các thông báo giao dịch quan trọng (hủy đơn, xác nhận đơn).
+    const campaignDLQ = new sqs.Queue(this, "CampaignDLQ", {
+      queueName: "MusicStoreCampaignDLQ",
+      retentionPeriod: cdk.Duration.days(14),
+    });
+
+    const campaignQueue = new sqs.Queue(this, "CampaignQueue", {
+      queueName: "MusicStoreCampaignQueue",
+      visibilityTimeout: cdk.Duration.seconds(30),
+      deadLetterQueue: {
+        maxReceiveCount: 3,
+        queue: campaignDLQ,
+      },
+    });
+
     // 3. Định nghĩa các Lambda Functions
 
     // Product API Lambda
@@ -137,6 +153,61 @@ export class BackendStack extends cdk.Stack {
       code: lambda.Code.fromAsset("../services/notification"),
       environment: {
         TABLE_NAME: props.productsTable.tableName,
+        SES_FROM_EMAIL: process.env.SES_FROM_EMAIL || "no-reply@musicstore.example.com",
+      },
+      tracing: lambda.Tracing.ACTIVE,
+      logRetention: logs.RetentionDays.ONE_WEEK,
+    });
+
+    // Campaign Sender Lambda (tiêu thụ CampaignQueue, dùng chung code với NotificationApiFunction
+    // nhưng là Lambda riêng + reservedConcurrentExecutions thấp để không tranh compute với luồng giao dịch)
+    const campaignSenderLambda = new lambda.Function(this, "CampaignSenderFunction", {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: "index.campaignHandler",
+      code: lambda.Code.fromAsset("../services/notification"),
+      environment: {
+        TABLE_NAME: props.productsTable.tableName,
+        SES_FROM_EMAIL: process.env.SES_FROM_EMAIL || "no-reply@musicstore.example.com",
+      },
+      reservedConcurrentExecutions: 2,
+      tracing: lambda.Tracing.ACTIVE,
+      logRetention: logs.RetentionDays.ONE_WEEK,
+    });
+
+    // Campaign API Lambda (Admin tạo/liệt kê chiến dịch)
+    const campaignApiLambda = new lambda.Function(this, "CampaignApiFunction", {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: "index.handler",
+      code: lambda.Code.fromAsset("../services/campaign-api"),
+      environment: {
+        TABLE_NAME: props.productsTable.tableName,
+        EVENT_BUS_NAME: eventBus.eventBusName,
+      },
+      tracing: lambda.Tracing.ACTIVE,
+      logRetention: logs.RetentionDays.ONE_WEEK,
+    });
+
+    // Campaign Fan-out Lambda (EventBridge trigger, chia batch khách hàng vào CampaignQueue)
+    const campaignFanOutLambda = new lambda.Function(this, "CampaignFanOutFunction", {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: "index.handler",
+      code: lambda.Code.fromAsset("../services/campaign-fanout"),
+      environment: {
+        TABLE_NAME: props.productsTable.tableName,
+        CAMPAIGN_QUEUE_URL: campaignQueue.queueUrl,
+      },
+      tracing: lambda.Tracing.ACTIVE,
+      logRetention: logs.RetentionDays.ONE_WEEK,
+    });
+
+    // Contact API Lambda (form Liên Hệ công khai, gửi email qua SES)
+    const contactApiLambda = new lambda.Function(this, "ContactApiFunction", {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: "index.handler",
+      code: lambda.Code.fromAsset("../services/contact-api"),
+      environment: {
+        SES_FROM_EMAIL: process.env.SES_FROM_EMAIL || "no-reply@musicstore.example.com",
+        CONTACT_INBOX_EMAIL: process.env.CONTACT_INBOX_EMAIL || "support@nhomtttnmusic.vn",
       },
       tracing: lambda.Tracing.ACTIVE,
       logRetention: logs.RetentionDays.ONE_WEEK,
@@ -169,12 +240,18 @@ export class BackendStack extends cdk.Stack {
       })
     );
 
+    campaignSenderLambda.addEventSource(
+      new lambdaEventSources.SqsEventSource(campaignQueue, {
+        batchSize: 10,
+      })
+    );
+
     // 5. Tạo EventBridge Rules chuyển tiếp sự kiện sang Notification SQS Queue
     const orderPlacedRule = new events.Rule(this, "OrderPlacedRule", {
       eventBus,
       eventPattern: {
         source: ["com.musicstore.order"],
-        detailType: ["OrderPlaced", "OrderUpdated"],
+        detailType: ["OrderPlaced", "OrderUpdated", "OrderCancelled"],
       },
     });
     orderPlacedRule.addTarget(new targets.SqsQueue(notificationQueue));
@@ -188,6 +265,16 @@ export class BackendStack extends cdk.Stack {
     });
     paymentSucceededRule.addTarget(new targets.SqsQueue(notificationQueue));
 
+    // Campaign là hành động one-shot (không cần buffer) nên trigger thẳng Lambda fan-out thay vì qua SQS
+    const campaignRequestedRule = new events.Rule(this, "CampaignRequestedRule", {
+      eventBus,
+      eventPattern: {
+        source: ["com.musicstore.campaign"],
+        detailType: ["CampaignRequested"],
+      },
+    });
+    campaignRequestedRule.addTarget(new targets.LambdaFunction(campaignFanOutLambda));
+
     // 6. Cấp quyền IAM cho các tài nguyên
     props.productsTable.grantReadWriteData(productApiLambda);
     props.productsTable.grantReadWriteData(orderApiLambda); // Order API cần đọc/ghi coupon (validate + tăng usageCount)
@@ -198,10 +285,51 @@ export class BackendStack extends cdk.Stack {
     props.stripeSecrets.grantRead(checkoutApiLambda);
     eventBus.grantPutEventsTo(productApiLambda);
     props.stripeSecrets.grantRead(paymentWebhookLambda);
-    
+
     orderQueue.grantSendMessages(orderApiLambda); // API Gateway Lambda cần quyền gửi tới OrderQueue
     eventBus.grantPutEventsTo(paymentWebhookLambda);
     eventBus.grantPutEventsTo(orderProcessingLambda); // Order Processor cần quyền bắn event tới EventBridge
+
+    props.productsTable.grantReadWriteData(notificationApiLambda); // Ghi bản ghi idempotency EVENT#{eventId}
+    notificationApiLambda.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["ses:SendEmail", "ses:SendRawEmail"],
+        resources: ["*"],
+      })
+    );
+    notificationApiLambda.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["sns:Publish"],
+        resources: ["*"],
+      })
+    );
+
+    props.productsTable.grantReadWriteData(campaignSenderLambda); // Idempotency EVENT#{eventId} cho từng lượt gửi campaign
+    campaignSenderLambda.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["ses:SendEmail", "ses:SendRawEmail"],
+        resources: ["*"],
+      })
+    );
+    campaignSenderLambda.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["sns:Publish"],
+        resources: ["*"],
+      })
+    );
+
+    props.productsTable.grantReadWriteData(campaignApiLambda); // Ghi/đọc bản ghi CAMPAIGN#{id}
+    eventBus.grantPutEventsTo(campaignApiLambda);
+
+    props.productsTable.grantReadData(campaignFanOutLambda); // Scan đơn hàng để lấy danh sách khách hàng
+    campaignQueue.grantSendMessages(campaignFanOutLambda);
+
+    contactApiLambda.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["ses:SendEmail", "ses:SendRawEmail"],
+        resources: ["*"],
+      })
+    );
 
     // Quyền gọi Lex V2 cho Chatbot Lambda
     chatbotApiLambda.addToRolePolicy(
@@ -294,6 +422,17 @@ export class BackendStack extends cdk.Stack {
       productApiIntegration
     );
     ratingsResource.addMethod(
+      "POST",
+      productApiIntegration,
+      authorizer ? {
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      } : undefined
+    );
+
+    // Route: /products/{id}/ratings/upload-url (sinh presigned POST để đính kèm ảnh đánh giá)
+    const ratingsUploadUrlResource = ratingsResource.addResource("upload-url");
+    ratingsUploadUrlResource.addMethod(
       "POST",
       productApiIntegration,
       authorizer ? {
@@ -487,6 +626,33 @@ export class BackendStack extends cdk.Stack {
     notificationsResource.addMethod(
       "POST",
       new apigateway.LambdaIntegration(notificationApiLambda)
+    );
+
+    // Route: /campaigns (Admin/Staff only - kiểm tra Cognito group ngay trong CampaignApiFunction)
+    const campaignsResource = api.root.addResource("campaigns");
+    const campaignApiIntegration = new apigateway.LambdaIntegration(campaignApiLambda);
+    campaignsResource.addMethod(
+      "POST",
+      campaignApiIntegration,
+      authorizer ? {
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      } : undefined
+    );
+    campaignsResource.addMethod(
+      "GET",
+      campaignApiIntegration,
+      authorizer ? {
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      } : undefined
+    );
+
+    // Route: /contact (public - form Liên Hệ)
+    const contactResource = api.root.addResource("contact");
+    contactResource.addMethod(
+      "POST",
+      new apigateway.LambdaIntegration(contactApiLambda)
     );
 
     // Route: /webhooks/stripe

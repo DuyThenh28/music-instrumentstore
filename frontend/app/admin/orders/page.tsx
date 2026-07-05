@@ -41,7 +41,7 @@ export default function AdminOrdersPage() {
     fetchOrders();
   }, []);
 
-  const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
+  const handleUpdateOrderStatus = async (orderId: string, newStatus: string, reason?: string) => {
     try {
       const session = await fetchAuthSession();
       const token = session.tokens?.idToken?.toString();
@@ -53,7 +53,7 @@ export default function AdminOrdersPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status: newStatus, reason }),
       });
 
       if (res.ok) {

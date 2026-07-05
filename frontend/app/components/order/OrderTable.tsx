@@ -2,8 +2,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AlertTriangle } from "lucide-react";
 import type { Order } from "../../../types/cart";
-import { useConfirm } from "../../context/ConfirmDialogContext";
 import { Pagination } from "../common/Pagination";
 
 interface OrderTableProps {
@@ -12,7 +12,7 @@ interface OrderTableProps {
   onSearchChange: (val: string) => void;
   statusFilter: string;
   onStatusFilterChange: (val: string) => void;
-  onUpdateStatus: (orderId: string, newStatus: string) => Promise<void>;
+  onUpdateStatus: (orderId: string, newStatus: string, reason?: string) => Promise<void>;
   onViewDetails: (order: Order) => void;
 }
 
@@ -48,9 +48,10 @@ export function OrderTable({
   onUpdateStatus,
   onViewDetails,
 }: OrderTableProps) {
-  const confirmAction = useConfirm();
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [cancelTarget, setCancelTarget] = useState<Order | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
 
   const statuses = ["Tất cả", "Chờ xác nhận", "Chờ lấy đơn", "Chờ giao hàng", "Đánh giá", "Tạm dừng", "Đã hủy"];
 
@@ -98,15 +99,18 @@ export function OrderTable({
     setUpdatingOrderId(null);
   };
 
-  const handleCancelOrder = async (order: Order) => {
-    const ok = await confirmAction({
-      message: `Bạn chắc chắn muốn hủy đơn hàng ${order.id}?`,
-      danger: true,
-    });
-    if (!ok) return;
+  const handleCancelOrder = (order: Order) => {
+    setCancelReason("");
+    setCancelTarget(order);
+  };
+
+  const confirmCancelOrder = async () => {
+    if (!cancelTarget) return;
+    const order = cancelTarget;
+    setCancelTarget(null);
 
     setUpdatingOrderId(order.id);
-    await onUpdateStatus(order.id, "Đã hủy");
+    await onUpdateStatus(order.id, "Đã hủy", cancelReason.trim());
     setUpdatingOrderId(null);
   };
 
@@ -225,6 +229,52 @@ export function OrderTable({
             </tbody>
           </table>
           <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+        </div>
+      )}
+
+      {cancelTarget && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          onClick={() => setCancelTarget(null)}
+        >
+          <div
+            className="w-full max-w-sm bg-white rounded-2xl p-6 md:p-7 text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-14 h-14 mx-auto mb-4 rounded-full flex items-center justify-center bg-rose-50 text-rose-600">
+              <AlertTriangle width="26" height="26" />
+            </div>
+
+            <h3 className="font-serif text-lg text-[#002B1F] mb-2">Hủy đơn hàng {cancelTarget.id.slice(0, 12)}...</h3>
+            <p className="text-sm text-slate-600 leading-relaxed mb-4">
+              Vui lòng nhập lý do hủy đơn — nội dung này sẽ được gửi kèm trong email/SMS thông báo cho khách hàng.
+            </p>
+
+            <textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="Ví dụ: Sản phẩm hết hàng, khách yêu cầu hủy..."
+              rows={3}
+              className="w-full mb-6 py-2.5 px-4 bg-white border border-gray-200 rounded-xl text-sm text-slate-700 outline-none focus:border-rose-400 focus:shadow-[0_0_0_1px_#fb7185] transition-all resize-none"
+            />
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setCancelTarget(null)}
+                className="flex-1 border border-gray-200 text-slate-600 font-bold text-sm uppercase tracking-widest py-3 rounded-xl hover:bg-gray-50 transition-colors"
+              >
+                Đóng
+              </button>
+              <button
+                type="button"
+                onClick={confirmCancelOrder}
+                className="flex-1 font-bold text-sm uppercase tracking-widest py-3 rounded-xl text-white bg-rose-600 hover:bg-rose-700 transition-colors"
+              >
+                Xác nhận hủy
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
