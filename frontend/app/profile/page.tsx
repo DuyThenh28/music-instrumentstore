@@ -25,6 +25,7 @@ interface DbOrderItem {
 
 interface DbOrder {
   id: string;
+  orderNumber?: number;
   customer: {
     name: string;
     phone: string;
@@ -144,6 +145,7 @@ function ProfileContent() {
         const ordersData = await ordersRes.json();
         const mappedOrders = ordersData.map((order: DbOrder) => ({
           id: order.id,
+          orderNumber: order.orderNumber,
           customer: order.customer,
           paymentMethod: order.paymentMethod,
           products: (order.items || []).map((item: DbOrderItem) => ({

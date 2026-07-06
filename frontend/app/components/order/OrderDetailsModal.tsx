@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { fetchAuthSession } from "aws-amplify/auth";
 import type { Order } from "../../../types/cart";
+import { formatOrderCode } from "../../lib/order";
 
 interface OrderDetailsModalProps {
   isOpen: boolean;
@@ -79,7 +80,7 @@ export function OrderDetailsModal({ isOpen, order, onClose }: OrderDetailsModalP
         <div className="flex justify-between items-center px-6 md:px-8 py-6 border-b border-gray-100 dark:border-primary-container/20 bg-[#F3EFEA] dark:bg-[#06261d] transition-colors duration-300">
           <div>
             <h3 className="font-serif text-lg font-bold text-[#002B1F] dark:text-[#80bea6]">Chi Tiết Đơn Hàng</h3>
-            <span className="text-xs font-mono text-slate-500 dark:text-emerald-100/50">ID: {order.id}</span>
+            <span className="text-xs font-mono text-slate-500 dark:text-emerald-100/50">Mã đơn: {formatOrderCode(order)}</span>
           </div>
           <button
             type="button"

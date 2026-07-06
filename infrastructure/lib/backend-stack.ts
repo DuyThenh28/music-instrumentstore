@@ -89,10 +89,27 @@ export class BackendStack extends cdk.Stack {
         TABLE_NAME: props.productsTable.tableName,
         BUCKET_NAME: props.productsBucket.bucketName,
         EVENT_BUS_NAME: eventBus.eventBusName,
+        USER_POOL_ID: props.userPool?.userPoolId || "",
       },
       tracing: lambda.Tracing.ACTIVE,
       logRetention: logs.RetentionDays.ONE_WEEK,
     });
+
+    // Cho phép Product API đồng bộ Cognito Group (Admin/Staff) khi admin đổi vai trò user
+    // và đọc danh sách thành viên nhóm để hiển thị đúng quyền thật trong /admin/staff, /admin/users
+    if (props.userPool) {
+      productApiLambda.addToRolePolicy(
+        new iam.PolicyStatement({
+          actions: [
+            "cognito-idp:AdminAddUserToGroup",
+            "cognito-idp:AdminRemoveUserFromGroup",
+            "cognito-idp:ListUsersInGroup",
+            "cognito-idp:ListUsers",
+          ],
+          resources: [props.userPool.userPoolArn],
+        })
+      );
+    }
 
     // Order API Lambda (Đẩy đơn hàng vào SQS)
     const orderApiLambda = new lambda.Function(this, "OrderApiFunction", {
@@ -573,6 +590,17 @@ export class BackendStack extends cdk.Stack {
       } : undefined
     );
 
+    // Route: /orders/{id}/confirm-receipt (PUT - Khách hàng tự xác nhận đã nhận hàng)
+    const orderConfirmReceiptResource = orderIdResource.addResource("confirm-receipt");
+    orderConfirmReceiptResource.addMethod(
+      "PUT",
+      productApiIntegration,
+      authorizer ? {
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      } : undefined
+    );
+
     // Route: /orders/{id}/history (GET - Staff hoặc chủ đơn hàng)
     const orderHistoryResource = orderIdResource.addResource("history");
     orderHistoryResource.addMethod(
@@ -595,11 +623,39 @@ export class BackendStack extends cdk.Stack {
       } : undefined
     );
 
+    // GET /coupons (Admin/Staff liệt kê toàn bộ coupon)
+    couponsResource.addMethod(
+      "GET",
+      productApiIntegration,
+      authorizer ? {
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      } : undefined
+    );
+
     // Route: /coupons/{code} (GET - public preview/validate)
     const couponCodeResource = couponsResource.addResource("{code}");
     couponCodeResource.addMethod(
       "GET",
       productApiIntegration
+    );
+
+    // PUT/DELETE /coupons/{code} (Admin/Staff sửa hoặc xóa coupon)
+    couponCodeResource.addMethod(
+      "PUT",
+      productApiIntegration,
+      authorizer ? {
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      } : undefined
+    );
+    couponCodeResource.addMethod(
+      "DELETE",
+      productApiIntegration,
+      authorizer ? {
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      } : undefined
     );
 
     // Route: /checkout
