@@ -3,12 +3,17 @@ import { Construct } from 'constructs';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+
+export interface AuthStackProps extends cdk.StackProps {
+  productsTable: dynamodb.Table;
+}
 
 export class AuthStack extends cdk.Stack {
   public readonly userPool: cognito.UserPool;
   public readonly userPoolClient: cognito.UserPoolClient;
 
-  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+  constructor(scope: Construct, id: string, props: AuthStackProps) {
     super(scope, id, props);
 
     // 1. Tạo Cognito User Pool (Nơi lưu trữ User)
@@ -35,6 +40,19 @@ export class AuthStack extends cdk.Stack {
       logRetention: logs.RetentionDays.ONE_WEEK,
     });
     this.userPool.addTrigger(cognito.UserPoolOperation.CUSTOM_MESSAGE, customMessageFn);
+
+    // 1c. Cognito Lambda Trigger: tự tạo bản ghi PROFILE trong DynamoDB ngay khi xác nhận đăng ký
+    const postConfirmationFn = new lambda.Function(this, 'PostConfirmationTriggerFunction', {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: 'index.handler',
+      code: lambda.Code.fromAsset('../services/auth-post-confirmation'),
+      environment: {
+        TABLE_NAME: props.productsTable.tableName,
+      },
+      logRetention: logs.RetentionDays.ONE_WEEK,
+    });
+    props.productsTable.grantWriteData(postConfirmationFn);
+    this.userPool.addTrigger(cognito.UserPoolOperation.POST_CONFIRMATION, postConfirmationFn);
 
     // 2. Tạo App Client cho Next.js Frontend
     this.userPoolClient = new cognito.UserPoolClient(this, 'MusicStoreUserPoolClient', {

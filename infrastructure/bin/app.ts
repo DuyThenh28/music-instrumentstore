@@ -33,7 +33,9 @@ const securityStack = new SecurityStack(app, `MusicStoreSecurityStack-${envName}
 
 const databaseStack = new DatabaseStack(app, `MusicStoreDatabaseStack-${envName}`);
 
-const authStack = new AuthStack(app, `MusicStoreAuthStack-${envName}`);
+const authStack = new AuthStack(app, `MusicStoreAuthStack-${envName}`, {
+  productsTable: databaseStack.mainTable,
+});
 
 new BackendStack(app, `MusicStoreBackendStack-${envName}`, {
   productsTable: databaseStack.mainTable,
