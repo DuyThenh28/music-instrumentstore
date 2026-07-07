@@ -1,6 +1,7 @@
 import type { PostConfirmationTriggerHandler } from "aws-lambda";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
+import type { UserProfile } from "@music-store/shared-types";
 
 const ddbClient = new DynamoDBClient({});
 const ddbDocClient = DynamoDBDocumentClient.from(ddbClient);
@@ -13,9 +14,20 @@ export const handler: PostConfirmationTriggerHandler = async (event) => {
   try {
     const userId = event.request.userAttributes.sub;
     const email = event.request.userAttributes.email || "";
-    const name = event.request.userAttributes.name || "";
+    // Nếu Cognito không có attribute `name` (vd. một luồng signup tương lai không yêu
+    // cầu nhập tên), dùng phần trước @ của email thay vì lưu chuỗi rỗng vĩnh viễn.
+    const name = event.request.userAttributes.name || email.split("@")[0] || "";
     const phone = event.request.userAttributes.phone_number || "";
     const now = new Date().toISOString();
+
+    const profile: UserProfile = {
+      userId,
+      email,
+      name,
+      phone,
+      address: "",
+      updatedAt: now,
+    };
 
     await ddbDocClient.send(
       new PutCommand({
@@ -23,12 +35,7 @@ export const handler: PostConfirmationTriggerHandler = async (event) => {
         Item: {
           PK: `USER#${userId}`,
           SK: "PROFILE",
-          userId,
-          email,
-          name,
-          phone,
-          address: "",
-          updatedAt: now,
+          ...profile,
         },
         ConditionExpression: "attribute_not_exists(PK)",
       })

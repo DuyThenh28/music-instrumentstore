@@ -1,3 +1,4 @@
+"use strict";
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
@@ -31,21 +32,24 @@ var handler = async (event) => {
   try {
     const userId = event.request.userAttributes.sub;
     const email = event.request.userAttributes.email || "";
-    const name = event.request.userAttributes.name || "";
+    const name = event.request.userAttributes.name || email.split("@")[0] || "";
     const phone = event.request.userAttributes.phone_number || "";
     const now = (/* @__PURE__ */ new Date()).toISOString();
+    const profile = {
+      userId,
+      email,
+      name,
+      phone,
+      address: "",
+      updatedAt: now
+    };
     await ddbDocClient.send(
       new import_lib_dynamodb.PutCommand({
         TableName: tableName,
         Item: {
           PK: `USER#${userId}`,
           SK: "PROFILE",
-          userId,
-          email,
-          name,
-          phone,
-          address: "",
-          updatedAt: now
+          ...profile
         },
         ConditionExpression: "attribute_not_exists(PK)"
       })
