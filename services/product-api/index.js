@@ -948,13 +948,14 @@ var handler = async (event) => {
         }
         for (const cognitoUser of cognitoUsers) {
           if (!profilesByUserId.has(cognitoUser.userId)) {
-            profilesByUserId.set(cognitoUser.userId, {
+            const fallbackProfile = {
               userId: cognitoUser.userId,
               email: cognitoUser.email,
               name: cognitoUser.name || cognitoUser.email.split("@")[0] || "User",
               phone: "",
               address: ""
-            });
+            };
+            profilesByUserId.set(cognitoUser.userId, fallbackProfile);
           }
         }
         const profiles = Array.from(profilesByUserId.values()).map((profile) => {

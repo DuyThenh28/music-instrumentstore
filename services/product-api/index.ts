@@ -20,6 +20,7 @@ import {
   AdminRemoveUserFromGroupCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
 import { randomUUID } from "node:crypto";
+import type { UserProfile } from "@music-store/shared-types";
 
 type ProductItem = {
   PK?: string;
@@ -1189,9 +1190,9 @@ export const handler: APIGatewayProxyHandler = async (event) => {
           listAllCognitoUsers(),
         ]);
 
-        const profilesByUserId = new Map<string, any>();
+        const profilesByUserId = new Map<string, UserProfile>();
         for (const item of items) {
-          const profile = stripTableKeys(item);
+          const profile = stripTableKeys(item) as UserProfile;
           profilesByUserId.set(profile.userId, profile);
         }
 
@@ -1199,13 +1200,14 @@ export const handler: APIGatewayProxyHandler = async (event) => {
         // ở môi trường này) vẫn phải xuất hiện trong danh sách, thay vì biến mất hoàn toàn.
         for (const cognitoUser of cognitoUsers) {
           if (!profilesByUserId.has(cognitoUser.userId)) {
-            profilesByUserId.set(cognitoUser.userId, {
+            const fallbackProfile: Omit<UserProfile, "role"> = {
               userId: cognitoUser.userId,
               email: cognitoUser.email,
               name: cognitoUser.name || cognitoUser.email.split("@")[0] || "User",
               phone: "",
               address: "",
-            });
+            };
+            profilesByUserId.set(cognitoUser.userId, fallbackProfile as UserProfile);
           }
         }
 
