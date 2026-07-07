@@ -77,6 +77,36 @@ const listGroupUserIds = async (groupName: string): Promise<Set<string>> => {
   return ids;
 };
 
+// Toàn bộ user trong Cognito User Pool (không chỉ user đã có PROFILE trong DynamoDB) —
+// dùng để merge vào danh sách admin, tránh trường hợp user bị "biến mất" khỏi trang
+// quản trị chỉ vì chưa từng có bản ghi PROFILE (vd. backfill chưa chạy ở môi trường này).
+const listAllCognitoUsers = async (): Promise<
+  Array<{ userId: string; email: string; name: string }>
+> => {
+  const users: Array<{ userId: string; email: string; name: string }> = [];
+  if (!userPoolId) return users;
+
+  let paginationToken: string | undefined;
+  do {
+    const result = await cognitoClient.send(
+      new ListUsersCommand({
+        UserPoolId: userPoolId,
+        PaginationToken: paginationToken,
+      })
+    );
+    for (const user of result.Users ?? []) {
+      const sub = user.Attributes?.find((attr) => attr.Name === "sub")?.Value;
+      if (!sub) continue;
+      const email = user.Attributes?.find((attr) => attr.Name === "email")?.Value || "";
+      const name = user.Attributes?.find((attr) => attr.Name === "name")?.Value || "";
+      users.push({ userId: sub, email, name });
+    }
+    paginationToken = result.PaginationToken;
+  } while (paginationToken);
+
+  return users;
+};
+
 // Đồng bộ Cognito Group thật khi admin đổi vai trò user trong UI, để field `role`
 // hiển thị luôn khớp với quyền truy cập thật (thay vì chỉ là 1 field DB rời rạc).
 const syncCognitoGroup = async (targetUserId: string, role: string) => {
@@ -1153,13 +1183,33 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
         // Quyền thật do Cognito Group quyết định, không phải field `role` lưu trong DynamoDB
         // (field này có thể lệch nếu bị đổi tay hoặc tạo từ trước khi có cơ chế đồng bộ).
-        const [adminIds, staffIds] = await Promise.all([
+        const [adminIds, staffIds, cognitoUsers] = await Promise.all([
           listGroupUserIds("Admin"),
           listGroupUserIds("Staff"),
+          listAllCognitoUsers(),
         ]);
 
-        const profiles = items.map((item) => {
+        const profilesByUserId = new Map<string, any>();
+        for (const item of items) {
           const profile = stripTableKeys(item);
+          profilesByUserId.set(profile.userId, profile);
+        }
+
+        // Bất kỳ user Cognito nào chưa có PROFILE trong DynamoDB (vd. backfill chưa chạy
+        // ở môi trường này) vẫn phải xuất hiện trong danh sách, thay vì biến mất hoàn toàn.
+        for (const cognitoUser of cognitoUsers) {
+          if (!profilesByUserId.has(cognitoUser.userId)) {
+            profilesByUserId.set(cognitoUser.userId, {
+              userId: cognitoUser.userId,
+              email: cognitoUser.email,
+              name: cognitoUser.name || cognitoUser.email.split("@")[0] || "User",
+              phone: "",
+              address: "",
+            });
+          }
+        }
+
+        const profiles = Array.from(profilesByUserId.values()).map((profile) => {
           profile.role = adminIds.has(profile.userId)
             ? "Admin"
             : staffIds.has(profile.userId)

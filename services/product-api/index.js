@@ -1,3 +1,4 @@
+"use strict";
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
@@ -56,6 +57,28 @@ var listGroupUserIds = async (groupName) => {
     nextToken = result.NextToken;
   } while (nextToken);
   return ids;
+};
+var listAllCognitoUsers = async () => {
+  const users = [];
+  if (!userPoolId) return users;
+  let paginationToken;
+  do {
+    const result = await cognitoClient.send(
+      new import_client_cognito_identity_provider.ListUsersCommand({
+        UserPoolId: userPoolId,
+        PaginationToken: paginationToken
+      })
+    );
+    for (const user of result.Users ?? []) {
+      const sub = user.Attributes?.find((attr) => attr.Name === "sub")?.Value;
+      if (!sub) continue;
+      const email = user.Attributes?.find((attr) => attr.Name === "email")?.Value || "";
+      const name = user.Attributes?.find((attr) => attr.Name === "name")?.Value || "";
+      users.push({ userId: sub, email, name });
+    }
+    paginationToken = result.PaginationToken;
+  } while (paginationToken);
+  return users;
 };
 var syncCognitoGroup = async (targetUserId, role) => {
   if (!userPoolId) return;
@@ -913,12 +936,28 @@ var handler = async (event) => {
           items.push(...result.Items ?? []);
           ExclusiveStartKey = result.LastEvaluatedKey;
         } while (ExclusiveStartKey);
-        const [adminIds, staffIds] = await Promise.all([
+        const [adminIds, staffIds, cognitoUsers] = await Promise.all([
           listGroupUserIds("Admin"),
-          listGroupUserIds("Staff")
+          listGroupUserIds("Staff"),
+          listAllCognitoUsers()
         ]);
-        const profiles = items.map((item) => {
+        const profilesByUserId = /* @__PURE__ */ new Map();
+        for (const item of items) {
           const profile = stripTableKeys(item);
+          profilesByUserId.set(profile.userId, profile);
+        }
+        for (const cognitoUser of cognitoUsers) {
+          if (!profilesByUserId.has(cognitoUser.userId)) {
+            profilesByUserId.set(cognitoUser.userId, {
+              userId: cognitoUser.userId,
+              email: cognitoUser.email,
+              name: cognitoUser.name || cognitoUser.email.split("@")[0] || "User",
+              phone: "",
+              address: ""
+            });
+          }
+        }
+        const profiles = Array.from(profilesByUserId.values()).map((profile) => {
           profile.role = adminIds.has(profile.userId) ? "Admin" : staffIds.has(profile.userId) ? "Staff" : "User";
           return profile;
         });
