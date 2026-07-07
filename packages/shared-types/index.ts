@@ -3,3 +3,13 @@ export interface SharedProductSummary {
   name: string;
   price: number;
 }
+
+export interface UserProfile {
+  userId: string;
+  email: string;
+  name: string;
+  phone: string;
+  address: string;
+  role?: "Admin" | "Staff" | "User";
+  updatedAt?: string;
+}
