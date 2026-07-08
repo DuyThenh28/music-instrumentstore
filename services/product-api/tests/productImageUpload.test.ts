@@ -68,4 +68,20 @@ describe("POST /products/{id}/image-upload-url", () => {
     const presignArgs = mockCreatePresignedPost.mock.calls[0][1];
     expect(presignArgs.Key).toMatch(/^products\/24\/.+\.png$/);
   });
+
+  it("returns a presigned upload URL for a Staff user", async () => {
+    const result = await handler(
+      buildEvent({
+        requestContext: {
+          authorizer: { claims: { sub: "staff-1", email: "staff1@example.com", "cognito:groups": "Staff" } },
+        },
+      } as any),
+      {} as Context,
+      () => {}
+    );
+
+    expect(result!.statusCode).toBe(200);
+    const body = JSON.parse(result!.body);
+    expect(body.uploadUrl).toBe("https://test-bucket.s3.amazonaws.com/");
+  });
 });
