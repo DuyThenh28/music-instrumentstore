@@ -521,6 +521,17 @@ export class BackendStack extends cdk.Stack {
       } : undefined
     );
 
+    // Route: /users/profile/avatar-upload-url (sinh presigned POST để upload ảnh đại diện)
+    const avatarUploadUrlResource = profileResource.addResource("avatar-upload-url");
+    avatarUploadUrlResource.addMethod(
+      "POST",
+      productApiIntegration,
+      authorizer ? {
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      } : undefined
+    );
+
     // Route: /users/orders
     const userOrdersResource = usersResource.addResource("orders");
     userOrdersResource.addMethod(

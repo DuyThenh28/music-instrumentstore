@@ -584,6 +584,43 @@ var handler = async (event) => {
         return jsonResponse(200, { profile: stripTableKeys(updatedProfile) });
       }
     }
+    if (resource === "/users/profile/avatar-upload-url" && method === "POST") {
+      if (!userId) {
+        return jsonResponse(401, { message: "Unauthorized: Ch\u01B0a \u0111\u0103ng nh\u1EADp" });
+      }
+      if (!bucketName) {
+        return jsonResponse(500, { message: "BUCKET_NAME environment variable is not set" });
+      }
+      if (!event.body) {
+        return jsonResponse(400, { message: "Missing request body" });
+      }
+      const { fileType } = JSON.parse(event.body);
+      const extension = REVIEW_IMAGE_ALLOWED_TYPES[fileType];
+      if (!extension) {
+        return jsonResponse(400, {
+          message: "\u0110\u1ECBnh d\u1EA1ng \u1EA3nh kh\xF4ng h\u1EE3p l\u1EC7. Ch\u1EC9 ch\u1EA5p nh\u1EADn JPEG, PNG ho\u1EB7c WEBP."
+        });
+      }
+      const key = `users/${userId}/profile/${(0, import_node_crypto.randomUUID)()}.${extension}`;
+      const { url, fields } = await (0, import_s3_presigned_post.createPresignedPost)(s3Client, {
+        Bucket: bucketName,
+        Key: key,
+        Conditions: [
+          ["content-length-range", 1, REVIEW_IMAGE_MAX_BYTES],
+          ["eq", "$Content-Type", fileType]
+        ],
+        Fields: {
+          "Content-Type": fileType
+        },
+        Expires: 60
+      });
+      return jsonResponse(200, {
+        uploadUrl: url,
+        fields,
+        publicUrl: `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`,
+        maxSizeBytes: REVIEW_IMAGE_MAX_BYTES
+      });
+    }
     if (resource === "/users/orders") {
       if (!userId) {
         return jsonResponse(401, { message: "Unauthorized: Ch\u01B0a \u0111\u0103ng nh\u1EADp" });

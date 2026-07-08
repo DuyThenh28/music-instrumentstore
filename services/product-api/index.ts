@@ -720,6 +720,51 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     }
 
     // -------------------------------------------------------------
+    // Route: /users/profile/avatar-upload-url (sinh presigned POST để upload ảnh đại diện)
+    // -------------------------------------------------------------
+    if (resource === "/users/profile/avatar-upload-url" && method === "POST") {
+      if (!userId) {
+        return jsonResponse(401, { message: "Unauthorized: Chưa đăng nhập" });
+      }
+      if (!bucketName) {
+        return jsonResponse(500, { message: "BUCKET_NAME environment variable is not set" });
+      }
+      if (!event.body) {
+        return jsonResponse(400, { message: "Missing request body" });
+      }
+
+      const { fileType } = JSON.parse(event.body);
+      const extension = REVIEW_IMAGE_ALLOWED_TYPES[fileType];
+      if (!extension) {
+        return jsonResponse(400, {
+          message: "Định dạng ảnh không hợp lệ. Chỉ chấp nhận JPEG, PNG hoặc WEBP.",
+        });
+      }
+
+      const key = `users/${userId}/profile/${randomUUID()}.${extension}`;
+
+      const { url, fields } = await createPresignedPost(s3Client, {
+        Bucket: bucketName,
+        Key: key,
+        Conditions: [
+          ["content-length-range", 1, REVIEW_IMAGE_MAX_BYTES],
+          ["eq", "$Content-Type", fileType],
+        ],
+        Fields: {
+          "Content-Type": fileType,
+        },
+        Expires: 60,
+      });
+
+      return jsonResponse(200, {
+        uploadUrl: url,
+        fields,
+        publicUrl: `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`,
+        maxSizeBytes: REVIEW_IMAGE_MAX_BYTES,
+      });
+    }
+
+    // -------------------------------------------------------------
     // Route: /users/orders
     // -------------------------------------------------------------
     if (resource === "/users/orders") {
