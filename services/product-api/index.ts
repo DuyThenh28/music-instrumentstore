@@ -459,6 +459,70 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     }
 
     // -------------------------------------------------------------
+    // Route: /auth/device/verify (xác minh OTP, đánh dấu thiết bị tin cậy)
+    // -------------------------------------------------------------
+    if (resource === "/auth/device/verify" && method === "POST") {
+      if (!userId) {
+        return jsonResponse(401, { message: "Unauthorized: Chưa đăng nhập" });
+      }
+      if (!event.body) {
+        return jsonResponse(400, { message: "Missing request body" });
+      }
+
+      const { deviceId, code } = JSON.parse(event.body);
+      if (!deviceId || !code) {
+        return jsonResponse(400, { message: "Missing deviceId or code" });
+      }
+
+      const otpRes = await dynamoDb.send(
+        new GetCommand({
+          TableName: tableName,
+          Key: {
+            PK: `USER#${userId}`,
+            SK: "OTP",
+          },
+        })
+      );
+
+      const otp = otpRes.Item;
+      if (!otp || new Date(otp.expiresAt).getTime() < Date.now()) {
+        return jsonResponse(400, {
+          message: "Mã xác minh đã hết hạn hoặc không tồn tại. Vui lòng đăng nhập lại để nhận mã mới.",
+        });
+      }
+
+      if (otp.code !== code) {
+        return jsonResponse(400, { message: "Mã xác minh không đúng." });
+      }
+
+      const nowIso = new Date().toISOString();
+      await dynamoDb.send(
+        new PutCommand({
+          TableName: tableName,
+          Item: {
+            PK: `USER#${userId}`,
+            SK: `DEVICE#${deviceId}`,
+            deviceId,
+            createdAt: nowIso,
+            lastSeenAt: nowIso,
+          },
+        })
+      );
+
+      await dynamoDb.send(
+        new DeleteCommand({
+          TableName: tableName,
+          Key: {
+            PK: `USER#${userId}`,
+            SK: "OTP",
+          },
+        })
+      );
+
+      return jsonResponse(200, { trusted: true });
+    }
+
+    // -------------------------------------------------------------
     // Route: /products/{id}/view
     // -------------------------------------------------------------
     if (resource === "/products/{id}/view" && method === "POST") {

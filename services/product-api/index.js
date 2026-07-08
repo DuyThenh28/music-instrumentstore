@@ -358,6 +358,59 @@ var handler = async (event) => {
       }
       return jsonResponse(200, { trusted: false });
     }
+    if (resource === "/auth/device/verify" && method === "POST") {
+      if (!userId) {
+        return jsonResponse(401, { message: "Unauthorized: Ch\u01B0a \u0111\u0103ng nh\u1EADp" });
+      }
+      if (!event.body) {
+        return jsonResponse(400, { message: "Missing request body" });
+      }
+      const { deviceId, code } = JSON.parse(event.body);
+      if (!deviceId || !code) {
+        return jsonResponse(400, { message: "Missing deviceId or code" });
+      }
+      const otpRes = await dynamoDb.send(
+        new import_lib_dynamodb.GetCommand({
+          TableName: tableName,
+          Key: {
+            PK: `USER#${userId}`,
+            SK: "OTP"
+          }
+        })
+      );
+      const otp = otpRes.Item;
+      if (!otp || new Date(otp.expiresAt).getTime() < Date.now()) {
+        return jsonResponse(400, {
+          message: "M\xE3 x\xE1c minh \u0111\xE3 h\u1EBFt h\u1EA1n ho\u1EB7c kh\xF4ng t\u1ED3n t\u1EA1i. Vui l\xF2ng \u0111\u0103ng nh\u1EADp l\u1EA1i \u0111\u1EC3 nh\u1EADn m\xE3 m\u1EDBi."
+        });
+      }
+      if (otp.code !== code) {
+        return jsonResponse(400, { message: "M\xE3 x\xE1c minh kh\xF4ng \u0111\xFAng." });
+      }
+      const nowIso = (/* @__PURE__ */ new Date()).toISOString();
+      await dynamoDb.send(
+        new import_lib_dynamodb.PutCommand({
+          TableName: tableName,
+          Item: {
+            PK: `USER#${userId}`,
+            SK: `DEVICE#${deviceId}`,
+            deviceId,
+            createdAt: nowIso,
+            lastSeenAt: nowIso
+          }
+        })
+      );
+      await dynamoDb.send(
+        new import_lib_dynamodb.DeleteCommand({
+          TableName: tableName,
+          Key: {
+            PK: `USER#${userId}`,
+            SK: "OTP"
+          }
+        })
+      );
+      return jsonResponse(200, { trusted: true });
+    }
     if (resource === "/products/{id}/view" && method === "POST") {
       const productId2 = getProductId(event.path, event.pathParameters?.id);
       if (!productId2) {
