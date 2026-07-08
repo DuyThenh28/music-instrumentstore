@@ -10,6 +10,7 @@ import {
   UpdateCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { EventBridgeClient, PutEventsCommand } from "@aws-sdk/client-eventbridge";
+import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
 import { S3Client } from "@aws-sdk/client-s3";
 import { createPresignedPost } from "@aws-sdk/s3-presigned-post";
 import {
@@ -154,6 +155,48 @@ const REVIEW_IMAGE_ALLOWED_TYPES: Record<string, string> = {
 };
 const REVIEW_IMAGE_MAX_BYTES = 5 * 1024 * 1024; // 5MB/ảnh
 const REVIEW_IMAGE_MAX_COUNT = 3; // tối đa 3 ảnh/đánh giá
+
+const lambdaClient = new LambdaClient({});
+const notificationFunctionName = process.env.NOTIFICATION_FUNCTION_NAME;
+
+// Ngưỡng "thiết bị quen": trùng bậc với thời hạn refresh token mặc định của Cognito (30 ngày) —
+// đến lúc refresh token hết hạn, user bắt buộc phải đăng nhập lại thật sự, và lần đó sẽ tự
+// kích hoạt lại việc kiểm tra thiết bị, nên khoảng cách tối đa giữa 2 lần xác minh luôn bị chặn.
+const DEVICE_TRUST_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+const OTP_TTL_MS = 10 * 60 * 1000;
+
+const generateOtpCode = (): string => String(Math.floor(100000 + Math.random() * 900000));
+
+// Gửi email OTP bằng cách gọi thẳng (Lambda Invoke) vào handler đồng bộ có sẵn của
+// services/notification, thay vì qua EventBridge (bất đồng bộ, độ trễ khó đoán) hoặc qua
+// route API Gateway công khai /notifications (hiện chưa nơi nào gọi tới).
+const sendOtpEmail = async (email: string, code: string): Promise<void> => {
+  if (!notificationFunctionName) {
+    throw new Error("NOTIFICATION_FUNCTION_NAME environment variable is not set");
+  }
+
+  const payload = {
+    httpMethod: "POST",
+    body: JSON.stringify({
+      type: "EMAIL",
+      recipient: email,
+      title: "Mã xác minh đăng nhập - Music Instrument Store",
+      message: `Mã xác minh thiết bị mới của bạn là: ${code}. Mã có hiệu lực trong 10 phút. Nếu bạn không yêu cầu mã này, vui lòng bỏ qua email này.`,
+    }),
+  };
+
+  const result = await lambdaClient.send(
+    new InvokeCommand({
+      FunctionName: notificationFunctionName,
+      InvocationType: "RequestResponse",
+      Payload: Buffer.from(JSON.stringify(payload)),
+    })
+  );
+
+  if (result.FunctionError) {
+    throw new Error(`Notification Lambda returned an error: ${result.FunctionError}`);
+  }
+};
 
 const jsonResponse = (
   statusCode: number,
@@ -333,6 +376,85 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     const userId = authorizer?.claims?.sub;
     const email = authorizer?.claims?.email;
     const userName = authorizer?.claims?.name || email || authorizer?.claims?.["cognito:username"] || "User";
+
+    // -------------------------------------------------------------
+    // Route: /auth/device/check (kiểm tra thiết bị đã tin cậy hay chưa, gửi OTP nếu chưa)
+    // -------------------------------------------------------------
+    if (resource === "/auth/device/check" && method === "POST") {
+      if (!userId) {
+        return jsonResponse(401, { message: "Unauthorized: Chưa đăng nhập" });
+      }
+      if (!event.body) {
+        return jsonResponse(400, { message: "Missing request body" });
+      }
+
+      const { deviceId } = JSON.parse(event.body);
+      if (!deviceId) {
+        return jsonResponse(400, { message: "Missing deviceId" });
+      }
+
+      const deviceRes = await dynamoDb.send(
+        new GetCommand({
+          TableName: tableName,
+          Key: {
+            PK: `USER#${userId}`,
+            SK: `DEVICE#${deviceId}`,
+          },
+        })
+      );
+
+      const now = Date.now();
+      const device = deviceRes.Item;
+      const isTrusted =
+        !!device &&
+        typeof device.lastSeenAt === "string" &&
+        now - new Date(device.lastSeenAt).getTime() < DEVICE_TRUST_WINDOW_MS;
+
+      if (isTrusted) {
+        await dynamoDb.send(
+          new PutCommand({
+            TableName: tableName,
+            Item: {
+              PK: `USER#${userId}`,
+              SK: `DEVICE#${deviceId}`,
+              deviceId,
+              createdAt: device!.createdAt || new Date(now).toISOString(),
+              lastSeenAt: new Date(now).toISOString(),
+            },
+          })
+        );
+        return jsonResponse(200, { trusted: true });
+      }
+
+      if (!email) {
+        return jsonResponse(400, { message: "Không xác định được email để gửi mã xác minh" });
+      }
+
+      const code = generateOtpCode();
+      const expiresAt = new Date(now + OTP_TTL_MS).toISOString();
+
+      await dynamoDb.send(
+        new PutCommand({
+          TableName: tableName,
+          Item: {
+            PK: `USER#${userId}`,
+            SK: "OTP",
+            code,
+            expiresAt,
+            ttl: Math.floor((now + OTP_TTL_MS) / 1000),
+          },
+        })
+      );
+
+      try {
+        await sendOtpEmail(email, code);
+      } catch (err) {
+        console.error("Failed to send device verification OTP email", err);
+        return jsonResponse(500, { message: "Không thể gửi mã xác minh, vui lòng thử lại." });
+      }
+
+      return jsonResponse(200, { trusted: false });
+    }
 
     // -------------------------------------------------------------
     // Route: /products/{id}/view

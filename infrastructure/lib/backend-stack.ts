@@ -176,6 +176,11 @@ export class BackendStack extends cdk.Stack {
       logRetention: logs.RetentionDays.ONE_WEEK,
     });
 
+    // productApiLambda gọi thẳng (Invoke) vào notificationApiLambda để gửi email OTP xác minh
+    // thiết bị đồng bộ, không qua EventBridge/SQS (độ trễ khó đoán) hay route API Gateway công khai.
+    productApiLambda.addEnvironment("NOTIFICATION_FUNCTION_NAME", notificationApiLambda.functionName);
+    notificationApiLambda.grantInvoke(productApiLambda);
+
     // Campaign Sender Lambda (tiêu thụ CampaignQueue, dùng chung code với NotificationApiFunction
     // nhưng là Lambda riêng để tách biệt log/scaling với luồng giao dịch)
     const campaignSenderLambda = new lambda.Function(this, "CampaignSenderFunction", {
@@ -535,6 +540,30 @@ export class BackendStack extends cdk.Stack {
     // Route: /users/profile/avatar-upload-url (sinh presigned POST để upload ảnh đại diện)
     const avatarUploadUrlResource = profileResource.addResource("avatar-upload-url");
     avatarUploadUrlResource.addMethod(
+      "POST",
+      productApiIntegration,
+      authorizer ? {
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      } : undefined
+    );
+
+    // Route: /auth/device/check, /auth/device/verify (xác minh thiết bị/OTP khi đăng nhập)
+    const authResource = api.root.addResource("auth");
+    const deviceResource = authResource.addResource("device");
+
+    const deviceCheckResource = deviceResource.addResource("check");
+    deviceCheckResource.addMethod(
+      "POST",
+      productApiIntegration,
+      authorizer ? {
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      } : undefined
+    );
+
+    const deviceVerifyResource = deviceResource.addResource("verify");
+    deviceVerifyResource.addMethod(
       "POST",
       productApiIntegration,
       authorizer ? {

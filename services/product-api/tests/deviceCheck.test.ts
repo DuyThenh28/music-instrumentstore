@@ -1,0 +1,97 @@
+import { mockClient } from "aws-sdk-client-mock";
+import { DynamoDBDocumentClient, GetCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
+import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
+import type { APIGatewayProxyEvent, Context } from "aws-lambda";
+import { handler } from "../index";
+
+const ddbMock = mockClient(DynamoDBDocumentClient);
+const lambdaMock = mockClient(LambdaClient);
+
+function buildEvent(overrides: Partial<APIGatewayProxyEvent> = {}): APIGatewayProxyEvent {
+  return {
+    resource: "/auth/device/check",
+    httpMethod: "POST",
+    path: "/auth/device/check",
+    pathParameters: null,
+    body: JSON.stringify({ deviceId: "device-abc" }),
+    requestContext: {
+      authorizer: {
+        claims: {
+          sub: "user-1",
+          email: "user1@example.com",
+        },
+      },
+    },
+    ...overrides,
+  } as unknown as APIGatewayProxyEvent;
+}
+
+beforeEach(() => {
+  ddbMock.reset();
+  lambdaMock.reset();
+  lambdaMock.on(InvokeCommand).resolves({ StatusCode: 200 });
+});
+
+describe("POST /auth/device/check", () => {
+  it("returns 401 when not authenticated", async () => {
+    const result = await handler(
+      buildEvent({ requestContext: { authorizer: undefined } as any }),
+      {} as Context,
+      () => {}
+    );
+    expect(result!.statusCode).toBe(401);
+  });
+
+  it("trusts a device seen within the last 30 days without sending an OTP", async () => {
+    ddbMock.on(GetCommand).resolves({
+      Item: {
+        PK: "USER#user-1",
+        SK: "DEVICE#device-abc",
+        deviceId: "device-abc",
+        lastSeenAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+    });
+    ddbMock.on(PutCommand).resolves({});
+
+    const result = await handler(buildEvent(), {} as Context, () => {});
+
+    expect(result!.statusCode).toBe(200);
+    expect(JSON.parse(result!.body)).toEqual({ trusted: true });
+    expect(lambdaMock.commandCalls(InvokeCommand)).toHaveLength(0);
+  });
+
+  it("treats a device unseen for over 30 days as untrusted and sends an OTP email", async () => {
+    ddbMock.on(GetCommand).resolves({
+      Item: {
+        PK: "USER#user-1",
+        SK: "DEVICE#device-abc",
+        deviceId: "device-abc",
+        lastSeenAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+    });
+    ddbMock.on(PutCommand).resolves({});
+
+    const result = await handler(buildEvent(), {} as Context, () => {});
+
+    expect(result!.statusCode).toBe(200);
+    expect(JSON.parse(result!.body)).toEqual({ trusted: false });
+    expect(lambdaMock.commandCalls(InvokeCommand)).toHaveLength(1);
+    const invokePayload = JSON.parse(
+      Buffer.from(lambdaMock.commandCalls(InvokeCommand)[0].args[0].input.Payload as Uint8Array).toString()
+    );
+    const emailBody = JSON.parse(invokePayload.body);
+    expect(emailBody.recipient).toBe("user1@example.com");
+    expect(emailBody.message).toMatch(/\d{6}/);
+  });
+
+  it("treats a never-seen device as untrusted and sends an OTP email", async () => {
+    ddbMock.on(GetCommand).resolves({ Item: undefined });
+    ddbMock.on(PutCommand).resolves({});
+
+    const result = await handler(buildEvent(), {} as Context, () => {});
+
+    expect(result!.statusCode).toBe(200);
+    expect(JSON.parse(result!.body)).toEqual({ trusted: false });
+    expect(lambdaMock.commandCalls(InvokeCommand)).toHaveLength(1);
+  });
+});

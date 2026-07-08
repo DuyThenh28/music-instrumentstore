@@ -26,6 +26,7 @@ module.exports = __toCommonJS(index_exports);
 var import_client_dynamodb = require("@aws-sdk/client-dynamodb");
 var import_lib_dynamodb = require("@aws-sdk/lib-dynamodb");
 var import_client_eventbridge = require("@aws-sdk/client-eventbridge");
+var import_client_lambda = require("@aws-sdk/client-lambda");
 var import_client_s3 = require("@aws-sdk/client-s3");
 var import_s3_presigned_post = require("@aws-sdk/s3-presigned-post");
 var import_client_cognito_identity_provider = require("@aws-sdk/client-cognito-identity-provider");
@@ -119,6 +120,35 @@ var REVIEW_IMAGE_ALLOWED_TYPES = {
 };
 var REVIEW_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 var REVIEW_IMAGE_MAX_COUNT = 3;
+var lambdaClient = new import_client_lambda.LambdaClient({});
+var notificationFunctionName = process.env.NOTIFICATION_FUNCTION_NAME;
+var DEVICE_TRUST_WINDOW_MS = 30 * 24 * 60 * 60 * 1e3;
+var OTP_TTL_MS = 10 * 60 * 1e3;
+var generateOtpCode = () => String(Math.floor(1e5 + Math.random() * 9e5));
+var sendOtpEmail = async (email, code) => {
+  if (!notificationFunctionName) {
+    throw new Error("NOTIFICATION_FUNCTION_NAME environment variable is not set");
+  }
+  const payload = {
+    httpMethod: "POST",
+    body: JSON.stringify({
+      type: "EMAIL",
+      recipient: email,
+      title: "M\xE3 x\xE1c minh \u0111\u0103ng nh\u1EADp - Music Instrument Store",
+      message: `M\xE3 x\xE1c minh thi\u1EBFt b\u1ECB m\u1EDBi c\u1EE7a b\u1EA1n l\xE0: ${code}. M\xE3 c\xF3 hi\u1EC7u l\u1EF1c trong 10 ph\xFAt. N\u1EBFu b\u1EA1n kh\xF4ng y\xEAu c\u1EA7u m\xE3 n\xE0y, vui l\xF2ng b\u1ECF qua email n\xE0y.`
+    })
+  };
+  const result = await lambdaClient.send(
+    new import_client_lambda.InvokeCommand({
+      FunctionName: notificationFunctionName,
+      InvocationType: "RequestResponse",
+      Payload: Buffer.from(JSON.stringify(payload))
+    })
+  );
+  if (result.FunctionError) {
+    throw new Error(`Notification Lambda returned an error: ${result.FunctionError}`);
+  }
+};
 var jsonResponse = (statusCode, body) => ({
   statusCode,
   headers: {
@@ -265,6 +295,69 @@ var handler = async (event) => {
     const userId = authorizer?.claims?.sub;
     const email = authorizer?.claims?.email;
     const userName = authorizer?.claims?.name || email || authorizer?.claims?.["cognito:username"] || "User";
+    if (resource === "/auth/device/check" && method === "POST") {
+      if (!userId) {
+        return jsonResponse(401, { message: "Unauthorized: Ch\u01B0a \u0111\u0103ng nh\u1EADp" });
+      }
+      if (!event.body) {
+        return jsonResponse(400, { message: "Missing request body" });
+      }
+      const { deviceId } = JSON.parse(event.body);
+      if (!deviceId) {
+        return jsonResponse(400, { message: "Missing deviceId" });
+      }
+      const deviceRes = await dynamoDb.send(
+        new import_lib_dynamodb.GetCommand({
+          TableName: tableName,
+          Key: {
+            PK: `USER#${userId}`,
+            SK: `DEVICE#${deviceId}`
+          }
+        })
+      );
+      const now = Date.now();
+      const device = deviceRes.Item;
+      const isTrusted = !!device && typeof device.lastSeenAt === "string" && now - new Date(device.lastSeenAt).getTime() < DEVICE_TRUST_WINDOW_MS;
+      if (isTrusted) {
+        await dynamoDb.send(
+          new import_lib_dynamodb.PutCommand({
+            TableName: tableName,
+            Item: {
+              PK: `USER#${userId}`,
+              SK: `DEVICE#${deviceId}`,
+              deviceId,
+              createdAt: device.createdAt || new Date(now).toISOString(),
+              lastSeenAt: new Date(now).toISOString()
+            }
+          })
+        );
+        return jsonResponse(200, { trusted: true });
+      }
+      if (!email) {
+        return jsonResponse(400, { message: "Kh\xF4ng x\xE1c \u0111\u1ECBnh \u0111\u01B0\u1EE3c email \u0111\u1EC3 g\u1EEDi m\xE3 x\xE1c minh" });
+      }
+      const code = generateOtpCode();
+      const expiresAt = new Date(now + OTP_TTL_MS).toISOString();
+      await dynamoDb.send(
+        new import_lib_dynamodb.PutCommand({
+          TableName: tableName,
+          Item: {
+            PK: `USER#${userId}`,
+            SK: "OTP",
+            code,
+            expiresAt,
+            ttl: Math.floor((now + OTP_TTL_MS) / 1e3)
+          }
+        })
+      );
+      try {
+        await sendOtpEmail(email, code);
+      } catch (err) {
+        console.error("Failed to send device verification OTP email", err);
+        return jsonResponse(500, { message: "Kh\xF4ng th\u1EC3 g\u1EEDi m\xE3 x\xE1c minh, vui l\xF2ng th\u1EED l\u1EA1i." });
+      }
+      return jsonResponse(200, { trusted: false });
+    }
     if (resource === "/products/{id}/view" && method === "POST") {
       const productId2 = getProductId(event.path, event.pathParameters?.id);
       if (!productId2) {
