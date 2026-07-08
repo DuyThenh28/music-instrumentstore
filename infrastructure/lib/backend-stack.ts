@@ -150,19 +150,6 @@ export class BackendStack extends cdk.Stack {
       logRetention: logs.RetentionDays.ONE_WEEK,
     });
 
-    // Chatbot AI Lambda (Amazon Lex integration)
-    const chatbotApiLambda = new lambda.Function(this, "ChatbotApiFunction", {
-      runtime: lambda.Runtime.NODEJS_22_X,
-      handler: "chatBotHandler.handler",
-      code: lambda.Code.fromAsset("../services/chatbot-backend"),
-      environment: {
-        LEX_BOT_ID: process.env.LEX_BOT_ID || "dummy-bot-id",
-        LEX_BOT_ALIAS_ID: process.env.LEX_BOT_ALIAS_ID || "dummy-alias-id",
-      },
-      tracing: lambda.Tracing.ACTIVE,
-      logRetention: logs.RetentionDays.ONE_WEEK,
-    });
-
     // Notification Service Lambda (Lắng nghe NotificationQueue hoặc gọi đồng bộ)
     const notificationApiLambda = new lambda.Function(this, "NotificationApiFunction", {
       runtime: lambda.Runtime.NODEJS_22_X,
@@ -348,14 +335,6 @@ export class BackendStack extends cdk.Stack {
     contactApiLambda.addToRolePolicy(
       new iam.PolicyStatement({
         actions: ["ses:SendEmail", "ses:SendRawEmail"],
-        resources: ["*"],
-      })
-    );
-
-    // Quyền gọi Lex V2 cho Chatbot Lambda
-    chatbotApiLambda.addToRolePolicy(
-      new iam.PolicyStatement({
-        actions: ["lex:RecognizeText"],
         resources: ["*"],
       })
     );
@@ -714,17 +693,6 @@ export class BackendStack extends cdk.Stack {
     checkoutResource.addMethod(
       "POST",
       new apigateway.LambdaIntegration(checkoutApiLambda)
-    );
-
-    // Route: /chat
-    const chatResource = api.root.addResource("chat");
-    chatResource.addMethod(
-      "POST",
-      new apigateway.LambdaIntegration(chatbotApiLambda),
-      authorizer ? {
-        authorizer,
-        authorizationType: apigateway.AuthorizationType.COGNITO,
-      } : undefined
     );
 
     // Route: /notifications
