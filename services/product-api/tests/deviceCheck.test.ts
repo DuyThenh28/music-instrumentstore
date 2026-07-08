@@ -94,6 +94,7 @@ describe("POST /auth/device/check", () => {
     expect(typeof otpItem.code).toBe("string");
     expect(otpItem.code).toMatch(/^\d{6}$/);
     expect(typeof otpItem.expiresAt).toBe("string");
+    expect(otpItem.attempts).toBe(0);
     // ttl must be a Unix-seconds timestamp (DynamoDB TTL requirement), roughly now + 10 minutes.
     const expectedTtlSeconds = Math.floor((before + 10 * 60 * 1000) / 1000);
     expect(otpItem.ttl).toBeGreaterThanOrEqual(expectedTtlSeconds - 1);

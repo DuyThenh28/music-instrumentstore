@@ -124,6 +124,7 @@ var lambdaClient = new import_client_lambda.LambdaClient({});
 var notificationFunctionName = process.env.NOTIFICATION_FUNCTION_NAME;
 var DEVICE_TRUST_WINDOW_MS = 30 * 24 * 60 * 60 * 1e3;
 var OTP_TTL_MS = 10 * 60 * 1e3;
+var MAX_OTP_ATTEMPTS = 5;
 var generateOtpCode = () => String(Math.floor(1e5 + Math.random() * 9e5));
 var sendOtpEmail = async (email, code) => {
   if (!notificationFunctionName) {
@@ -346,6 +347,7 @@ var handler = async (event) => {
             SK: "OTP",
             code,
             expiresAt,
+            attempts: 0,
             ttl: Math.floor((now + OTP_TTL_MS) / 1e3)
           }
         })
@@ -384,7 +386,25 @@ var handler = async (event) => {
           message: "M\xE3 x\xE1c minh \u0111\xE3 h\u1EBFt h\u1EA1n ho\u1EB7c kh\xF4ng t\u1ED3n t\u1EA1i. Vui l\xF2ng \u0111\u0103ng nh\u1EADp l\u1EA1i \u0111\u1EC3 nh\u1EADn m\xE3 m\u1EDBi."
         });
       }
+      const attempts = typeof otp.attempts === "number" ? otp.attempts : 0;
+      if (attempts >= MAX_OTP_ATTEMPTS) {
+        await dynamoDb.send(
+          new import_lib_dynamodb.DeleteCommand({
+            TableName: tableName,
+            Key: { PK: `USER#${userId}`, SK: "OTP" }
+          })
+        );
+        return jsonResponse(400, {
+          message: "B\u1EA1n \u0111\xE3 nh\u1EADp sai qu\xE1 s\u1ED1 l\u1EA7n cho ph\xE9p. Vui l\xF2ng \u0111\u0103ng nh\u1EADp l\u1EA1i \u0111\u1EC3 nh\u1EADn m\xE3 m\u1EDBi."
+        });
+      }
       if (otp.code !== code) {
+        await dynamoDb.send(
+          new import_lib_dynamodb.PutCommand({
+            TableName: tableName,
+            Item: { ...otp, attempts: attempts + 1 }
+          })
+        );
         return jsonResponse(400, { message: "M\xE3 x\xE1c minh kh\xF4ng \u0111\xFAng." });
       }
       const nowIso = (/* @__PURE__ */ new Date()).toISOString();

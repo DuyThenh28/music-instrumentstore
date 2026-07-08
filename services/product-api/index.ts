@@ -164,6 +164,10 @@ const notificationFunctionName = process.env.NOTIFICATION_FUNCTION_NAME;
 // kích hoạt lại việc kiểm tra thiết bị, nên khoảng cách tối đa giữa 2 lần xác minh luôn bị chặn.
 const DEVICE_TRUST_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 const OTP_TTL_MS = 10 * 60 * 1000;
+// Giới hạn số lần nhập sai mã OTP trước khi buộc phải đăng nhập lại để nhận mã mới —
+// không có giới hạn này thì một JWT hợp lệ (đã bị đánh cắp) có thể dò hết 900.000 mã trong
+// 10 phút hiệu lực, làm mất hết tác dụng cảnh báo "thiết bị lạ" của tính năng này.
+const MAX_OTP_ATTEMPTS = 5;
 
 const generateOtpCode = (): string => String(Math.floor(100000 + Math.random() * 900000));
 
@@ -443,6 +447,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
             SK: "OTP",
             code,
             expiresAt,
+            attempts: 0,
             ttl: Math.floor((now + OTP_TTL_MS) / 1000),
           },
         })
@@ -491,7 +496,26 @@ export const handler: APIGatewayProxyHandler = async (event) => {
         });
       }
 
+      const attempts = typeof otp.attempts === "number" ? otp.attempts : 0;
+      if (attempts >= MAX_OTP_ATTEMPTS) {
+        await dynamoDb.send(
+          new DeleteCommand({
+            TableName: tableName,
+            Key: { PK: `USER#${userId}`, SK: "OTP" },
+          })
+        );
+        return jsonResponse(400, {
+          message: "Bạn đã nhập sai quá số lần cho phép. Vui lòng đăng nhập lại để nhận mã mới.",
+        });
+      }
+
       if (otp.code !== code) {
+        await dynamoDb.send(
+          new PutCommand({
+            TableName: tableName,
+            Item: { ...otp, attempts: attempts + 1 },
+          })
+        );
         return jsonResponse(400, { message: "Mã xác minh không đúng." });
       }
 

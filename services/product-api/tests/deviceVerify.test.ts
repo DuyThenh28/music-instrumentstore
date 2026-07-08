@@ -53,11 +53,47 @@ describe("POST /auth/device/verify", () => {
       Item: {
         code: "999999",
         expiresAt: new Date(Date.now() + 60 * 1000).toISOString(),
+        attempts: 0,
       },
     });
+    ddbMock.on(PutCommand).resolves({});
 
     const result = await handler(buildEvent(), {} as Context, () => {});
     expect(result!.statusCode).toBe(400);
+  });
+
+  it("increments the attempt counter on an incorrect code", async () => {
+    ddbMock.on(GetCommand).resolves({
+      Item: {
+        code: "999999",
+        expiresAt: new Date(Date.now() + 60 * 1000).toISOString(),
+        attempts: 2,
+      },
+    });
+    ddbMock.on(PutCommand).resolves({});
+
+    await handler(buildEvent(), {} as Context, () => {});
+
+    const putCall = ddbMock.commandCalls(PutCommand)[0];
+    expect(putCall.args[0].input.Item?.attempts).toBe(3);
+  });
+
+  it("locks out and deletes the OTP after the max number of incorrect attempts", async () => {
+    ddbMock.on(GetCommand).resolves({
+      Item: {
+        code: "999999",
+        expiresAt: new Date(Date.now() + 60 * 1000).toISOString(),
+        attempts: 5,
+      },
+    });
+    ddbMock.on(DeleteCommand).resolves({});
+
+    const result = await handler(buildEvent(), {} as Context, () => {});
+
+    expect(result!.statusCode).toBe(400);
+    expect(ddbMock.commandCalls(PutCommand)).toHaveLength(0);
+    const deleteCall = ddbMock.commandCalls(DeleteCommand)[0];
+    expect(deleteCall.args[0].input.Key?.SK).toBe("OTP");
   });
 
   it("trusts the device and deletes the OTP on a correct, unexpired code", async () => {
