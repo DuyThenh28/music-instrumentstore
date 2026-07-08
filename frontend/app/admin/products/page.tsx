@@ -31,6 +31,15 @@ export default function AdminProductsPage() {
     description: "",
   });
 
+  const [authToken, setAuthToken] = useState("");
+
+  useEffect(() => {
+    fetchAuthSession().then((session) => {
+      const token = session.tokens?.idToken?.toString();
+      if (token) setAuthToken(token);
+    });
+  }, []);
+
   const fetchProducts = async () => {
     try {
       const res = await fetch("/api/products");
@@ -186,6 +195,7 @@ export default function AdminProductsPage() {
         isSubmitting={isSubmitting}
         onSubmit={handleSubmit}
         onClose={() => setIsModalOpen(false)}
+        authToken={authToken}
       />
     </div>
   );

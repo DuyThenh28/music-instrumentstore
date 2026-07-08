@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { Product } from "../../../types/product";
+import { ImagePicker } from "../common/ImagePicker";
 
 interface ProductFormData {
   id: string;
@@ -21,6 +22,7 @@ interface ProductModalProps {
   isSubmitting: boolean;
   onSubmit: (e: React.FormEvent) => void;
   onClose: () => void;
+  authToken: string;
 }
 
 const inputClasses =
@@ -35,6 +37,7 @@ export function ProductModal({
   isSubmitting,
   onSubmit,
   onClose,
+  authToken,
 }: ProductModalProps) {
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
 
@@ -154,15 +157,14 @@ export function ProductModal({
           </div>
 
           <div>
-            <label htmlFor="prod-image" className={labelClasses}>Đường dẫn hình ảnh (URL)</label>
-            <input
-              id="prod-image"
-              type="text"
-              value={formData.imageUrl}
-              onChange={(e) => onChangeField("imageUrl", e.target.value)}
+            <label className={labelClasses}>Hình ảnh sản phẩm</label>
+            <ImagePicker
+              currentImageUrl={formData.imageUrl}
+              uploadUrlEndpoint={`/api/products/${formData.id}/image-upload-url`}
+              authToken={authToken}
+              onUploaded={(publicUrl) => onChangeField("imageUrl", publicUrl)}
+              onError={(message) => console.error("Product image upload error:", message)}
               disabled={isSubmitting}
-              placeholder="Ví dụ: /images/yamaha-yas280.jpg hoặc link https://"
-              className={inputClasses}
             />
           </div>
 
