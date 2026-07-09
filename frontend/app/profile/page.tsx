@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable react-hooks/set-state-in-effect */
+
 import "../components/common/AmplifyConfig";
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";

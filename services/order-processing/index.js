@@ -50,21 +50,21 @@ var handler = async (event) => {
               TableName: tableName,
               Key: {
                 PK: `PRODUCT#${productId}`,
-                SK: "INVENTORY",
+                SK: "INVENTORY"
               },
               UpdateExpression: "SET stock = stock - :qty, updatedAt = :now",
               ConditionExpression: "stock >= :qty",
               ExpressionAttributeValues: {
                 ":qty": qty,
-                ":now": now,
-              },
-            },
+                ":now": now
+              }
+            }
           };
         });
         try {
           await dynamoDb.send(
             new import_lib_dynamodb.TransactWriteCommand({
-              TransactItems: transactItems,
+              TransactItems: transactItems
             })
           );
           console.log(`[Order Processing] Successfully deducted stock for COD order ${orderId}`);

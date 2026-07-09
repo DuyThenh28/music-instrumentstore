@@ -7,6 +7,13 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 
 export interface AuthStackProps extends cdk.StackProps {
   productsTable: dynamodb.Table;
+  googleClientId?: string;
+  googleClientSecret?: string;
+  facebookClientId?: string;
+  facebookClientSecret?: string;
+  cognitoDomainPrefix?: string;
+  callbackUrls?: string[];
+  logoutUrls?: string[];
 }
 
 export class AuthStack extends cdk.Stack {
@@ -54,12 +61,76 @@ export class AuthStack extends cdk.Stack {
     props.productsTable.grantWriteData(postConfirmationFn);
     this.userPool.addTrigger(cognito.UserPoolOperation.POST_CONFIRMATION, postConfirmationFn);
 
-    // 2. Tạo App Client cho Next.js Frontend
+    // 1d. Tạo Cognito Domain cho Hosted UI (nếu có prefix)
+    if (props.cognitoDomainPrefix) {
+      this.userPool.addDomain('CognitoDomain', {
+        cognitoDomain: {
+          domainPrefix: props.cognitoDomainPrefix,
+        },
+      });
+    }
+    // 1e. Cấu hình Google Identity Provider (IdP)
+    let googleProvider: cognito.UserPoolIdentityProviderGoogle | undefined;
+    if (props.googleClientId && props.googleClientSecret) {
+      googleProvider = new cognito.UserPoolIdentityProviderGoogle(this, 'GoogleProvider', {
+        userPool: this.userPool,
+        clientId: props.googleClientId,
+        clientSecretValue: cdk.SecretValue.unsafePlainText(props.googleClientSecret),
+        attributeMapping: {
+          email: cognito.ProviderAttribute.GOOGLE_EMAIL,
+          fullname: cognito.ProviderAttribute.GOOGLE_NAME,
+          emailVerified: cognito.ProviderAttribute.GOOGLE_EMAIL_VERIFIED,
+        },
+        scopes: ['profile', 'email', 'openid'],
+      });
+    }
+    // 1f. Cấu hình Facebook Identity Provider (IdP)
+    let facebookProvider: cognito.UserPoolIdentityProviderFacebook | undefined;
+    if (props.facebookClientId && props.facebookClientSecret) {
+      facebookProvider = new cognito.UserPoolIdentityProviderFacebook(this, 'FacebookProvider', {
+        userPool: this.userPool,
+        clientId: props.facebookClientId,
+        clientSecret: props.facebookClientSecret,
+        attributeMapping: {
+          email: cognito.ProviderAttribute.FACEBOOK_EMAIL,
+          fullname: cognito.ProviderAttribute.FACEBOOK_NAME,
+        },
+        scopes: ['public_profile', 'email'],
+      });
+    }
+
+    // 2. Tạo App Client cho Next.js Frontend (hỗ trợ OAuth + Social Providers)
+    const supportedProviders = [cognito.UserPoolClientIdentityProvider.COGNITO];
+    if (googleProvider) supportedProviders.push(cognito.UserPoolClientIdentityProvider.GOOGLE);
+    if (facebookProvider) supportedProviders.push(cognito.UserPoolClientIdentityProvider.FACEBOOK);
+
     this.userPoolClient = new cognito.UserPoolClient(this, 'MusicStoreUserPoolClient', {
       userPool: this.userPool,
       userPoolClientName: 'WebClient',
       generateSecret: false, // Frontend (Next.js) public client không dùng secret
+      supportedIdentityProviders: supportedProviders,
+      oAuth: props.cognitoDomainPrefix ? {
+        callbackUrls: props.callbackUrls || ['http://localhost:3000/'],
+        logoutUrls: props.logoutUrls || ['http://localhost:3000/'],
+        flows: {
+          authorizationCodeGrant: true,
+        },
+        scopes: [
+          cognito.OAuthScope.EMAIL,
+          cognito.OAuthScope.OPENID,
+          cognito.OAuthScope.PROFILE,
+          cognito.OAuthScope.COGNITO_ADMIN,
+        ],
+      } : undefined,
     });
+
+    // Thiết lập explicit dependencies để tránh race condition khi deploy
+    if (googleProvider) {
+      this.userPoolClient.node.addDependency(googleProvider);
+    }
+    if (facebookProvider) {
+      this.userPoolClient.node.addDependency(facebookProvider);
+    }
 
     // 3. Xuất giá trị (Outputs) để dùng cho Frontend và API Gateway
     new cdk.CfnOutput(this, 'UserPoolId', {

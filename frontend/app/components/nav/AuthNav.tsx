@@ -104,6 +104,7 @@ export default function AuthNav() {
     const unsubscribe = Hub.listen("auth", ({ payload }) => {
       switch (payload.event) {
         case "signedIn":
+        case "signInWithRedirect":
           init();
           break;
         case "signedOut":
